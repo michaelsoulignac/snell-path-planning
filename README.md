@@ -1,44 +1,45 @@
 # Snell Path Planning
 
-A trajectory-planning demo for a drone flying through contiguous wind regions.
+A path-planning demo for a drone flying through contiguous wind regions.
 
-The key idea of our planner is to apply the same variational principle that leads to Snell's law in optics to the planning of drone trajectories across different wind regions.
+The key idea of our planner is to apply the same variational principle that leads to Snell's law in optics to the planning of drone paths across different wind regions.
 
 This project has two main objectives:
 
-1. **Bridge physics and computer science** by turning a physical principle into a practical trajectory-planning algorithm.
-2. **Build a lightweight and fast planner**: regardless of the number of wind regions, only one scalar parameter needs to be optimized: the initial heading. The Snell-like invariant then determines the heading in every subsequent region.
+1. **Bridge physics and computer science** by turning a physical principle into a practical path-planning algorithm.
+2. **Build a lightweight and fast planner**: only one scalar parameter needs to be found, the initial heading. The Snell-like invariant then determines the heading in every subsequent region.
 
+> The path-planning problem remains one-dimensional, regardless of the number of regions.
 
-## From Snell's law to trajectory planning
+## From Snell's law to path planning
 
-How can we build a trajectory planner for a drone flying through regions with different wind conditions?
-
-Our starting point is the classical problem of light crossing different media. Fermat's principle states that the travel time of a light ray is stationary with respect to small variations of the path. Applying this principle to the crossing point between two media leads to Snell's law.
+Our starting point is the classical problem of light crossing different media. [Fermat's principle](https://en.wikipedia.org/wiki/Fermat%27s_principle) states that the travel time of a light ray is stationary with respect to small variations of the path. Applying this principle to the crossing point between two media leads to Snell's law.
 
 We can use the same idea for a drone flying through regions with different uniform winds. The drone does not have a fixed ground speed, so the classical optical formula must be adapted to the drone's kinematics.
 
-The goal is to derive a Snell-like refraction law that allows us to propagate a trajectory from one wind region to the next.
+Our goal is to derive a Snell-like refraction law that allows us to propagate a path from one wind region to the next.
 
 ---
 
-### 1. The Snell's law
+### 1. Snell's law
 
-[Fermat's principle](https://en.wikipedia.org/wiki/Fermat%27s_principle) states that light follows a path for which the travel time is stationary.
-
-Consider two optical media with propagation speeds $v_1$ and $v_2$, separated by a boundary.
+Consider two optical media in which light propagates at speeds $v_1$ and $v_2$, separated by a boundary.
 A ray travels from a point $S$ in medium 1 to a point $E$ in medium 2, crossing the boundary at $X$.
+Let $\vec{u}$ be the unit tangent vector of the boundary.
 
-For a given crossing point $X$, the total travel time is:
+For a given crossing point $X$, the total travel time is
 
 $$
-T(X) = \frac{|SX|}{v_1} + \frac{|XE|}{v_2}
+T(X) = \frac{SX}{v_1} + \frac{XE}{v_2},
 $$
 
-Let the crossing point move by a small distance $dl$ along the boundary.
-A small displacement of the crossing point changes the two path lengths in opposite directions.
+where $SX$ and $XE$ denote the distances from $S$ to $X$ and from $X$ to $E$.
 
-If $\theta_1$ and $\theta_2$ are the angles measured from the normal to the boundary, the first-order variation of the travel time is:
+Let the crossing point move by a small displacement $dl$ along the boundary, in the direction of $\vec{u}$.
+The vector $\overrightarrow{SX}$ then changes by $+\vec{u} dl$, while the vector $\overrightarrow{XE}$ changes by $-\vec{u} dl$.
+
+If $\theta_1$ and $\theta_2$ are the angles between the rays and the normal to the boundary (pointing from medium 1 to medium 2), measured in the same rotational sense, then projecting these displacements onto the rays shows that, for a small $dl$, the lengths $SX$ and $XE$ change by $\sin\theta_1 dl$ and $-\sin\theta_2 dl$.
+The travel time therefore changes by:
 
 $$
 dT = \frac{\sin\theta_1}{v_1} dl - \frac{\sin\theta_2}{v_2} dl
@@ -67,13 +68,16 @@ $$
 
 and $c$ is the speed of light in vacuum.
 
-> The important idea for our planner is not the optical index itself, but the principle behind the derivation: Fermat's principle of stationarity
+> The important idea for our planner is not the optical index itself, but the principle behind the derivation: Fermat's principle of stationarity.
 
 Let's apply the same reasoning to the drone!
 
 ### 2. The drone model
 
-For pedagogical purposes, we consider rectangular and contiguous wind regions. This choice simplifies the demonstration while remaining readily generalizable to more general geometries.
+For pedagogical purposes, we consider rectangular and contiguous wind regions, placed side by side along a line, so that all boundaries are parallel.
+This choice simplifies the demonstration, while the local refraction law extends to more general geometries.
+
+In each wind region, the wind is assumed to be uniform, and the drone flies at the same airspeed in all regions.
 
 Throughout this section:
 
@@ -83,4 +87,4 @@ Throughout this section:
 - $\vec{g}=v\vec{e}+\vec{c}$ is the ground velocity
 - $w=\vec{g}\cdot\vec{e}=v+\vec{c}\cdot\vec{e}$ is the component of the ground velocity along the heading
 
-The drone moves forward along its heading when $w>0$.
+The drone moves forward, along its heading, if and only if $w>0$.
