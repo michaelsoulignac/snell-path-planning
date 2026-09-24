@@ -22,7 +22,7 @@ The goal is to derive a Snell-like refraction law that allows us to propagate a 
 
 ---
 
-### 1. Classical Snell's law
+### 1. The Snell's law
 
 [Fermat's principle](https://en.wikipedia.org/wiki/Fermat%27s_principle) states that light follows a path for which the travel time is stationary.
 
@@ -41,7 +41,7 @@ A small displacement of the crossing point changes the two path lengths in oppos
 If $\theta_1$ and $\theta_2$ are the angles measured from the normal to the boundary, the first-order variation of the travel time is:
 
 $$
-dT = \frac{\sin\theta_1}{v_1}\:dl - \frac{\sin\theta_2}{v_2}\:dl
+dT = \frac{\sin\theta_1}{v_1} dl - \frac{\sin\theta_2}{v_2} dl
 $$
 
 At a stationary crossing point, $dT=0$. Therefore:
@@ -70,3 +70,17 @@ and $c$ is the speed of light in vacuum.
 > The important idea for our planner is not the optical index itself, but the principle behind the derivation: Fermat's principle of stationarity
 
 Let's apply the same reasoning to the drone!
+
+### 2. The drone model
+
+For pedagogical purposes, we consider rectangular and contiguous wind regions. This choice simplifies the demonstration while remaining readily generalizable to more general geometries.
+
+Throughout this section:
+
+- $v$ is the drone's airspeed
+- $\mathbf{c}$ is the wind vector
+- $\mathbf{e}$ is the drone's heading unit vector
+- $\mathbf{g}=v\mathbf{e}+\mathbf{c}$ is the ground velocity
+- $w=\mathbf{g}\cdot\mathbf{e}=v+\mathbf{c}\cdot\mathbf{e}$ is the component of the ground velocity along the heading
+
+The drone moves forward along its heading when $w>0$.
