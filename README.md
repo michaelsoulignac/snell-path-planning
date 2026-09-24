@@ -78,9 +78,9 @@ For pedagogical purposes, we consider rectangular and contiguous wind regions. T
 Throughout this section:
 
 - $v$ is the drone's airspeed
-- $\mathbf{c}$ is the wind vector
-- $\mathbf{e}$ is the drone's heading unit vector
-- $\mathbf{g}=v\mathbf{e}+\mathbf{c}$ is the ground velocity
-- $w=\mathbf{g}\cdot\mathbf{e}=v+\mathbf{c}\cdot\mathbf{e}$ is the component of the ground velocity along the heading
+- $\vec{c}$ is the wind vector
+- $\vec{e}$ is the drone's heading unit vector
+- $\vec{g}=v\vec{e}+\vec{c}$ is the ground velocity
+- $w=\vec{g}\cdot\vec{e}=v+\vec{c}\cdot\vec{e}$ is the component of the ground velocity along the heading
 
 The drone moves forward along its heading when $w>0$.
