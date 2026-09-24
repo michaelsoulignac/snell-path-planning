@@ -41,7 +41,7 @@ A small displacement of the crossing point changes the two path lengths in oppos
 If $\theta_1$ and $\theta_2$ are the angles measured from the normal to the boundary, the first-order variation of the travel time is:
 
 $$
-dT = \frac{\sin\theta_1}{v_1} dl - \frac{\sin\theta_2}{v_2} dl
+dT = \frac{\sin\theta_1}{v_1}\:dl - \frac{\sin\theta_2}{v_2}\:dl
 $$
 
 At a stationary crossing point, $dT=0$. Therefore:
