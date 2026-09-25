@@ -27,10 +27,10 @@ Consider two optical media in which light propagates at speeds $v_1$ and $v_2$, 
 A ray travels from a point $S$ in medium 1 to a point $E$ in medium 2, crossing the boundary at $X$.
 Let $\vec{u}$ be the unit tangent vector of the boundary.
 
-For a given crossing point $X$, the total travel time is
+For a given crossing point $X$, the total travel time is:
 
 $$
-T(X) = \frac{SX}{v_1} + \frac{XE}{v_2},
+T(X) = \frac{SX}{v_1} + \frac{XE}{v_2}
 $$
 
 where $SX$ and $XE$ denote the distances from $S$ to $X$ and from $X$ to $E$.
@@ -88,3 +88,35 @@ Throughout this section:
 - $w=\vec{g}\cdot\vec{e}=v+\vec{c}\cdot\vec{e}$ is the component of the ground velocity along the heading
 
 The drone moves forward, along its heading, if and only if $w>0$.
+
+Consider a drone crossing a boundary between two such wind regions, 1 and 2.
+In region $i$, the wind is $\vec{c}_i$, the drone's heading is $\vec{e}_i$, and $w_i=v+\vec{c}_i\cdot\vec{e}_i$.
+
+As in Section 1, let $S$ be the starting point in region 1, $E$ the end point in region 2, $X$ the crossing point on the boundary, and $\vec{u}$ the unit tangent vector of the boundary.
+
+Let the crossing point move by a small displacement $dl$ along the boundary, in the direction of $\vec{u}$.
+The vector $\overrightarrow{SX}$ then changes by $+\vec{u} dl$, while the vector $\overrightarrow{XE}$ changes by $-\vec{u} dl$.
+
+As noted above, a small change $\delta\vec{d}$ of a segment's displacement changes its travel time by $\vec{e}\cdot\delta\vec{d}/w$.
+Applying this to the two segments, the travel time changes by
+
+$$
+dT = \frac{\vec{u}\cdot\vec{e}_1}{w_1} dl - \frac{\vec{u}\cdot\vec{e}_2}{w_2} dl
+$$
+
+At a stationary crossing point, $dT=0$. Therefore:
+
+$$
+\frac{\vec{u}\cdot\vec{e}_1}{w_1} = \frac{\vec{u}\cdot\vec{e}_2}{w_2}
+$$
+
+As in Section 1, let $\theta_i$ be the angle between the heading $\vec{e}_i$ and the normal to the boundary, so that $\vec{u}\cdot\vec{e}_i=\sin\theta_i$. The law then reads:
+
+$$
+\boxed{
+\frac{\sin\theta_1}{w_1} = \frac{\sin\theta_2}{w_2}
+}
+$$
+
+This is the drone's analogue of Snell's law. Nice result, isn't it?
+
