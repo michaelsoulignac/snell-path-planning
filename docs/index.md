@@ -11,10 +11,6 @@ We can use the same idea for a drone flying through regions with different unifo
 
 Our goal is to derive a Snell-like refraction law that allows us to propagate a path from one wind region to the next.
 
-!!! abstract "In short"
-    A drone crossing regions with different winds follows a Snell-like refraction law. This law introduces a single conserved quantity, $\lambda$, which reduces path planning to finding one scalar: the launch heading.
-
-
 
 ## 1. Snell's law
 
@@ -39,10 +35,6 @@ The travel time therefore changes by:
 $$
 dT = \frac{\sin\theta_1}{v_1}\,dl - \frac{\sin\theta_2}{v_2}\,dl
 $$
-
-??? note "Where does the projection onto the rays come from?"
-    For a single straight segment with displacement $\vec{d}$ in a uniform medium of speed $v_i$, the travel time is $\tau = \|\vec{d}\|/v_i$. Differentiating with respect to $\vec{d}$ gives $\delta\tau = \vec{e}\cdot\delta\vec{d}/v_i$, where $\vec{e}=\vec{d}/\|\vec{d}\|$ is the unit vector along the segment. Hence a displacement is only "seen" through its projection onto the ray.
-
 
 At a stationary crossing point, $dT=0$. Therefore:
 
@@ -71,6 +63,7 @@ and $c$ is the speed of light in vacuum.
     The important idea for our planner is not the optical index itself, but the principle behind the derivation: Fermat's principle of stationarity.
 
 Let's apply the same reasoning to the drone!
+
 
 ## 2. The drone model
 
@@ -123,6 +116,7 @@ $$
 
 This is the drone's analogue of Snell's law. Nice result, isn't it?
 
+
 ## 3. Several wind regions: the conserved quantity
 
 Consider now a chain of wind regions separated by parallel boundaries, as in Section 2, but with more than two regions.
@@ -150,6 +144,7 @@ $$
 where $\theta$ is the heading in the region, and $(c_x,c_y)$ the wind there.
 
 The launch heading fixes $\lambda$ in the first region. The same $\lambda$ then fixes the heading in every subsequent region, without solving a new stationarity condition at each boundary.
+
 
 ## 4. Recovering the heading from $\lambda$
 
@@ -190,6 +185,7 @@ $$
 !!! warning
     This gives two mathematical solutions, but only one (the heading lying in the admissible sector defined in Section 5) corresponds to a physically valid path.
 
+
 ## 5. Admissible headings
 
 Not every heading gives a usable path. The drone must move forward across the region, and its travel time must stay finite. This requires:
@@ -203,6 +199,7 @@ $$
 The first condition ensures the drone progresses across the region; the second ensures it moves forward along its own heading, as in Section 2.
 
 Therefore, admissible headings form an angular sector, determined by the wind and the orientation of the boundaries.
+
 
 ## 6. Monotonicity of $\lambda$
 
@@ -225,6 +222,7 @@ $$
 
 Thus $\lambda$ increases strictly with the heading on the admissible sector: to each admissible $\lambda$ corresponds a unique heading.
 
+
 ## 7. Reaching a target
 
 Suppose the drone has to reach a target, with abscissa $x_{\text{target}}$, possibly inside a wind region rather than exactly on a boundary.
@@ -241,6 +239,7 @@ $$
 
 The original, two-dimensional path-planning problem is thus reduced to a one-dimensional root-finding problem in the launch heading.
 
+
 ## 8. Solving by bisection
 
 Section 6 shows that, within a single region, $\lambda$ increases strictly with the heading.
@@ -250,8 +249,6 @@ Bisection proceeds as follows: starting from an interval $[\theta_{\min}, \theta
 
 Each iteration propagates one candidate path through every region (using the closed-form inversion of Section 4) and compares the resulting $y_{\text{end}}$ to $y_{\text{target}}$.
 
-!!! tip
-    This is the drone's analogue of Snell's law. Nice result, isn't it?
 
 ## Conclusion
 
