@@ -1,6 +1,8 @@
 # From Snell's Law to Path Planning
 *by Michaël Soulignac*
 
+## Abstract
+
 How can we build a path planner for a drone flying through regions with different wind conditions?
 
 Our starting point is the classical problem of light crossing different media. [Fermat's principle](https://en.wikipedia.org/wiki/Fermat%27s_principle) states that the travel time of a light ray is stationary with respect to small variations of its path. Applying this principle to the crossing point between two media leads to Snell's law.
@@ -9,7 +11,6 @@ We can use the same idea for a drone flying through regions with different unifo
 
 Our goal is to derive a Snell-like refraction law that allows us to propagate a path from one wind region to the next.
 
----
 
 ## 1. Snell's law
 
@@ -58,8 +59,8 @@ $$
 
 and $c$ is the speed of light in vacuum.
 
-!!! note
-The important idea for our planner is not the optical index itself, but the principle behind the derivation: Fermat's principle of stationarity.
+!!! note 
+    The important idea for our planner is not the optical index itself, but the principle behind the derivation: Fermat's principle of stationarity.
 
 Let's apply the same reasoning to the drone!
 
