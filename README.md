@@ -120,3 +120,34 @@ $$
 
 This is the drone's analogue of Snell's law. Nice result, isn't it?
 
+### 3. Several wind regions: the conserved quantity
+
+Consider now a chain of wind regions separated by parallel boundaries, as in Section 2, but with more than two regions.
+
+Since the boundaries are parallel, $\vec{u}$ is the same at every crossing. The law derived in Section 2 therefore holds at each boundary in turn, and the quantity
+
+$$
+\frac{\vec{u}\cdot\vec{e}}{w}
+$$
+
+has the same value in every region crossed by the path. We call this common value $\lambda$:
+
+$$
+\boxed{
+\lambda = \frac{\vec{u}\cdot\vec{e}}{w}
+}
+$$
+
+For boundaries orthogonal to the $x$-axis, $\vec{u}=(0,1)$, and $\lambda$ takes the explicit form
+
+$$
+\lambda = \frac{\sin\theta}{v+c_x\cos\theta+c_y\sin\theta}
+$$
+
+where $\theta$ is the heading in the region, and $(c_x,c_y)$ the wind there.
+
+The launch heading fixes $\lambda$ in the first region. The same $\lambda$ then fixes the heading in every subsequent region, without solving a new stationarity condition at each boundary.
+
+### 4. Recovering the heading from $\lambda$
+
+TODO
