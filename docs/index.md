@@ -11,6 +11,10 @@ We can use the same idea for a drone flying through regions with different unifo
 
 Our goal is to derive a Snell-like refraction law that allows us to propagate a path from one wind region to the next.
 
+!!! abstract "In short"
+    A drone crossing regions with different winds follows a Snell-like refraction law. This law introduces a single conserved quantity, $\lambda$, which reduces path planning to finding one scalar: the launch heading.
+
+
 
 ## 1. Snell's law
 
@@ -36,6 +40,10 @@ $$
 dT = \frac{\sin\theta_1}{v_1}\,dl - \frac{\sin\theta_2}{v_2}\,dl
 $$
 
+??? note "Where does the projection onto the rays come from?"
+    For a single straight segment with displacement $\vec{d}$ in a uniform medium of speed $v_i$, the travel time is $\tau = \|\vec{d}\|/v_i$. Differentiating with respect to $\vec{d}$ gives $\delta\tau = \vec{e}\cdot\delta\vec{d}/v_i$, where $\vec{e}=\vec{d}/\|\vec{d}\|$ is the unit vector along the segment. Hence a displacement is only "seen" through its projection onto the ray.
+
+
 At a stationary crossing point, $dT=0$. Therefore:
 
 $$
@@ -59,7 +67,7 @@ $$
 
 and $c$ is the speed of light in vacuum.
 
-!!! note 
+!!! note
     The important idea for our planner is not the optical index itself, but the principle behind the derivation: Fermat's principle of stationarity.
 
 Let's apply the same reasoning to the drone!
@@ -90,8 +98,11 @@ Let the crossing point move by a small displacement $dl$ along the boundary, in 
 The vector $\overrightarrow{SX}$ then changes by $+\vec{u}\,dl$, while the vector $\overrightarrow{XE}$ changes by $-\vec{u}\,dl$.
 
 As noted above, a small change $\delta\vec{d}$ of a segment's displacement changes its travel time by $\vec{e}\cdot\delta\vec{d}/w$.
-Applying this to the two segments, the travel time changes by:
 
+??? note "Why does this identity still hold with wind?"
+    The drone covers $\vec{d}$ at ground velocity $v\vec{e}+\vec{c}$, so $\|\vec{d}-\vec{c}\tau\|=v\tau$. Differentiating this relation, and using $\vec{d}-\vec{c}\tau=v\tau\,\vec{e}$, gives $\vec{e}\cdot\delta\vec{d}=w\,\delta\tau$, that is, $\delta\tau=\vec{e}\cdot\delta\vec{d}/w$. This is the same identity as in Section 1, with $w$ in place of $v_i$.
+
+Applying this to the two segments, the travel time changes by:
 $$
 dT = \frac{\vec{u}\cdot\vec{e}_1}{w_1}\,dl - \frac{\vec{u}\cdot\vec{e}_2}{w_2}\,dl
 $$
@@ -160,7 +171,7 @@ $$
 A = 1-\lambda c_y, \qquad B = \lambda c_x, \qquad R = \sqrt{A^2+B^2}, \qquad \phi = \operatorname{atan2}(B,A)
 $$
 
-gives
+gives:
 
 $$
 \sin(\theta-\phi) = \frac{\lambda v}{R}
@@ -176,11 +187,12 @@ $$
 }
 $$
 
-Only the heading belonging to the admissible sector, defined below, is retained.
+!!! warning
+    This gives two mathematical solutions, but only one (the heading lying in the admissible sector defined in Section 5) corresponds to a physically valid path.
 
 ## 5. Admissible headings
 
-Not every heading gives a usable path. The drone must move forward across the region, and its travel time must stay finite. This requires
+Not every heading gives a usable path. The drone must move forward across the region, and its travel time must stay finite. This requires:
 
 $$
 g_x = v\cos\theta+c_x > 0
@@ -188,7 +200,7 @@ g_x = v\cos\theta+c_x > 0
 w = v+c_x\cos\theta+c_y\sin\theta > 0
 $$
 
-The first condition ensures the drone progresses across the region; the second ensures it moves forward along its own heading, as in Section 2. 
+The first condition ensures the drone progresses across the region; the second ensures it moves forward along its own heading, as in Section 2.
 
 Therefore, admissible headings form an angular sector, determined by the wind and the orientation of the boundaries.
 
@@ -199,6 +211,9 @@ Differentiating $\lambda(\theta)=\sin\theta/w$ with respect to $\theta$ gives
 $$
 \frac{d\lambda}{d\theta} = \frac{v\cos\theta+c_x}{w^2} = \frac{g_x}{w^2}
 $$
+
+??? note "Details on the differentiation"
+    By the quotient rule, $\dfrac{d\lambda}{d\theta} = \dfrac{\cos\theta\cdot w - \sin\theta\cdot w'}{w^2}$, where $w'=-c_x\sin\theta+c_y\cos\theta$. Expanding the numerator gives $v\cos\theta+c_x(\cos^2\theta+\sin^2\theta) = v\cos\theta+c_x = g_x$, using $\cos^2\theta+\sin^2\theta=1$.
 
 On the admissible sector, $g_x>0$ and $w>0$, so
 
@@ -212,7 +227,7 @@ Thus $\lambda$ increases strictly with the heading on the admissible sector: to 
 
 ## 7. Reaching a target
 
-Suppose the drone has to reach a target, with abscissa $x_{\text{target}}$, possibly inside a wind region rather than exactly on a boundary. 
+Suppose the drone has to reach a target, with abscissa $x_{\text{target}}$, possibly inside a wind region rather than exactly on a boundary.
 
 The vertical line $x = x_{\text{target}}$ can then be treated as a *virtual* boundary: since the wind is uniform within the region, crossing it does not change the heading, but it lets us read off the drone's position at that abscissa.
 
@@ -228,14 +243,15 @@ The original, two-dimensional path-planning problem is thus reduced to a one-dim
 
 ## 8. Solving by bisection
 
-Section 6 shows that, within a single region, $\lambda$ increases strictly with the heading. 
+Section 6 shows that, within a single region, $\lambda$ increases strictly with the heading.
 Thus, the equation $y_{\text{end}}(\theta_0) = y_{\text{target}}$ has at most one solution, which can be found by bisection.
 
-Bisection proceeds as follows: starting from an interval $[\theta_{\min}, \theta_{\max}]$ of admissible launch headings, on which $y_{\text{end}}$ changes sign relative to $y_{\text{target}}$, the interval is repeatedly halved, keeping the half on which the sign change still occurs. 
+Bisection proceeds as follows: starting from an interval $[\theta_{\min}, \theta_{\max}]$ of admissible launch headings, on which $y_{\text{end}}$ changes sign relative to $y_{\text{target}}$, the interval is repeatedly halved, keeping the half on which the sign change still occurs.
 
 Each iteration propagates one candidate path through every region (using the closed-form inversion of Section 4) and compares the resulting $y_{\text{end}}$ to $y_{\text{target}}$.
 
-This is why the launch heading is enough to determine the whole path: it is the only value the bisection ever has to search for, regardless of the number of wind regions crossed.
+!!! tip
+    This is the drone's analogue of Snell's law. Nice result, isn't it?
 
 ## Conclusion
 
