@@ -245,10 +245,14 @@ The original, two-dimensional path-planning problem is thus reduced to a one-dim
 Section 6 shows that, within a single region, $\lambda$ increases strictly with the heading.
 Thus, the equation $y_{\text{end}}(\theta_0) = y_{\text{target}}$ has at most one solution, which can be found by bisection.
 
-Bisection proceeds as follows: starting from an interval $[\theta_{\min}, \theta_{\max}]$ of admissible launch headings, on which $y_{\text{end}}$ changes sign relative to $y_{\text{target}}$, the interval is repeatedly halved, keeping the half on which the sign change still occurs.
+Bisection proceeds as follows: 
 
-Each iteration propagates one candidate path through every region (using the closed-form inversion of Section 4) and compares the resulting $y_{\text{end}}$ to $y_{\text{target}}$.
+* Starting from an interval $[\theta_{\min}, \theta_{\max}]$ of admissible launch headings, on which $y_{\text{end}}$ changes sign relative to $y_{\text{target}}$, the interval is repeatedly halved, keeping the half on which the sign change still occurs.
+* Each iteration propagates one candidate path through every region (using the closed-form inversion of Section 4) and compares the resulting $y_{\text{end}}$ to $y_{\text{target}}$.
 
+This is illustrated bellow. Each iteration is represented by a numbered dot.
+
+![Bisection process](images/bisection.svg)
 
 ## Conclusion
 

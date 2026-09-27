@@ -36,10 +36,10 @@ Install MkDocs Material:
 pip install mkdocs-material
 ```
 
-Then start the local development server:
+Then, go to the project root directory, and start the local development server:
 
 ```
-mkdocs serve
+python -m mkdocs serve
 ```
 
 The documentation is then available at:
