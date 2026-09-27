@@ -1,6 +1,9 @@
 # From Snell's Law to Path Planning
 *by Michaël Soulignac*
 
+* [Try the interactive demo](https://michaelsoulignac.github.io/snell-path-planning)
+* Explore the code on [Github](https://github.com/michaelsoulignac/snell-path-planning), all contributions are welcome!
+
 ## Abstract
 
 How can we build a path planner for a drone flying through regions with different wind conditions?
