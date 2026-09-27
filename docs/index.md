@@ -235,6 +235,9 @@ Suppose the drone has to reach a target, with abscissa $x_{\text{target}}$, poss
 
 The vertical line $x = x_{\text{target}}$ can then be treated as a *virtual* boundary: since the wind is uniform within the region, crossing it does not change the heading, but it lets us read off the drone's position at that abscissa.
 
+![Bisection process](images/target_point.svg)
+
+
 For a given launch heading $\theta_0$, the invariant $\lambda$ is fixed in the first region. It then determines the heading in every subsequent region, so the path can be propagated up to $x_{\text{target}}$, reaching some ordinate $y_{\text{end}}(\theta_0)$.
 
 Since $x_{\text{target}}$ is fixed, this leaves a single scalar equation for a single unknown, $\theta_0$:

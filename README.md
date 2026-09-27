@@ -49,5 +49,5 @@ http://127.0.0.1:8000/
 To generate the static site without starting the development server:
 
 ```
-mkdocs build
+python -m mkdocs build
 ```

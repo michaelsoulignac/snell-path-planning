@@ -1,5 +1,13 @@
 """
-Regenerates figures used in docs/index.md.
+Regenerates every figure used in docs/index.md ("From Snell's Law to Path Planning").
+
+Usage:
+    python scripts/generate_figures.py
+
+Output:
+    docs/images/snell_law.svg
+    docs/images/target_point.svg
+    docs/images/bisection.svg
 """
 
 import numpy as np
@@ -10,7 +18,7 @@ OUT_DIR = Path(__file__).resolve().parent.parent / "docs" / "images"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ---------------------------------------------------------------------------
-# Palette
+# Palette (light-mode values lifted from demo_drone_target.html's :root)
 # ---------------------------------------------------------------------------
 
 PANEL = "#f8fafc"
@@ -30,9 +38,6 @@ plt.rcParams.update({
     "axes.edgecolor": INK,
 })
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def new_axes(figsize, aspect_equal=True):
     fig, ax = plt.subplots(figsize=figsize)
@@ -84,10 +89,10 @@ def save(fig, name, pad=0.15):
 
 
 # ---------------------------------------------------------------------------
-# Figure : Snell's Law
+# Figure: Snell's Law
 # ---------------------------------------------------------------------------
 
-def generate_snell_law_figure():
+def snell_law():
     fig, ax = new_axes((10.5, 3.6))
 
     xlim, ylim = (-6.4, 6.4), (-1.9, 1.9)
@@ -99,26 +104,35 @@ def generate_snell_law_figure():
                                  fill=False, edgecolor=INK, lw=1.3))
     ax.axvline(0, color=INK, lw=1.4)  # the boundary itself
 
-    theta1, theta2 = 20.0, 9.0  # shallow angles from the horizontal, as in trajectory()
-    X = np.array([0.0, 0.0])
-    L1, L2 = 4.6, 4.6
-    e1, e2 = heading_dir(180 - theta1), heading_dir(theta2)
+    theta1, theta2 = 22.0, 13.0
+    X = np.array([0.06, 0.0])
+    L1, L2 = 4.6, 4.8
     S = X - L1 * heading_dir(theta1)  # S is up-stream, to the left
     E = X + L2 * heading_dir(theta2)
 
     ax.plot([S[0], X[0]], [S[1], X[1]], color=HEADING, lw=3.0, solid_capstyle="round", zorder=2)
     ax.plot([X[0], E[0]], [X[1], E[1]], color=PATH, lw=3.0, solid_capstyle="round", zorder=2)
+
+    # normal: horizontal dashed reference line through X, long enough that
+    # the angle arcs visibly start from it.
+    normal_half_len = 1.9
+    ax.plot([X[0] - normal_half_len, X[0] + normal_half_len], [X[1], X[1]],
+             color=MUTED, lw=1.4, ls=(0, (6, 5)), zorder=1)
+    ax.text(X[0] + normal_half_len + 0.1, X[1], "normal", color=MUTED, fontsize=11,
+             ha="left", va="center")
+
     for p in (S, X, E):
         ax.plot(*p, "o", color=INK, ms=5, zorder=5)
-    ax.text(S[0], S[1] - 0.32, "S", ha="center", va="top", fontsize=14)
-    ax.text(X[0], X[1] + 0.28, "X", ha="center", va="bottom", fontsize=14)
+    ax.text(S[0], S[1] + 0.32, "S", ha="center", va="bottom", fontsize=14)
+    ax.text(X[0] - 0.28, X[1] + 0.30, "X", ha="right", va="bottom", fontsize=14)
     ax.text(E[0], E[1] + 0.30, "E", ha="center", va="bottom", fontsize=14)
 
-    # theta1: angle at X between the boundary's normal (horizontal, pointing
-    # back towards S, i.e. angle 180) and the direction towards S.
+    # theta1: angle at X between the normal (pointing back towards S, i.e.
+    # angle 180, along the dashed line) and the direction towards S.
     draw_arc(ax, X, 180, 180 + theta1, 0.8, HEADING, r"$\theta_1$", label_radius_factor=1.3)
-    # theta2: angle at X between the normal (pointing forward, angle 0) and
-    # the direction towards E.
+
+    # theta2: angle at X between the normal (pointing forward, angle 0, along
+    # the dashed line) and the direction towards E.
     draw_arc(ax, X, 0, theta2, 0.8, PATH, r"$\theta_2$", label_radius_factor=1.55)
 
     ax.text(xlim[0] + 0.3, ylim[1] - 0.35, "Medium 1", fontsize=13, weight="bold")
@@ -130,7 +144,7 @@ def generate_snell_law_figure():
 
 
 # ---------------------------------------------------------------------------
-# A path-planning problem and its solution
+# Shared path-planning model, used by target_point() and bisection()
 # ---------------------------------------------------------------------------
 
 V = 70.0
@@ -204,10 +218,103 @@ def find_solution():
 
 
 # ---------------------------------------------------------------------------
-# Figure : bisection process
+# Figure: Path to target point
 # ---------------------------------------------------------------------------
 
-def generate_bisection_figure():
+def leg_headings(theta0, num_legs):
+    """Recomputes the per-leg heading (one per crossed zone), independently
+    from propagate(), purely for the drone-heading arrows drawn at each
+    waypoint. Mirrors propagate()'s own logic without altering it, since
+    propagate()/y_end()/find_solution() are shared with bisection()."""
+    cx0, cy0 = ZONES[0]["c"]
+    w0 = V + cx0 * np.cos(theta0) + cy0 * np.sin(theta0)
+    lam = np.sin(theta0) / w0
+    thetas = [theta0]
+    for z in ZONES[1:num_legs]:
+        thetas.append(heading_from_lambda(lam, z["c"][0], z["c"][1]))
+    return thetas
+
+
+def target_point():
+    fig, ax = new_axes((10.5, 4.6), aspect_equal=False)
+    ax.set_aspect("equal")
+
+    theta0 = np.radians(8.0)
+    pts, _ = propagate(theta0, up_to_x=X_TARGET)
+    xs, ys = zip(*pts)
+    thetas = leg_headings(theta0, num_legs=len(pts) - 1)
+
+    plot_w = sum(z["dx"] for z in ZONES)
+    top_margin = 1.6
+    target_gap = 0.6
+
+    y_max = max(max(ys), Y_TARGET) + target_gap + top_margin
+    y_min = min(0, min(ys)) - 0.7
+
+    ZONE_BG = "#e6f3e9"
+    ax.add_patch(plt.Rectangle((0, y_min), plot_w, y_max - y_min,
+                                 facecolor=ZONE_BG, edgecolor=INK, lw=1.4, zorder=0))
+    # the target sits inside the last zone rather than exactly on a real
+    # frontier, so its abscissa is marked with a dashed "virtual boundary".
+    ax.plot([X_TARGET, X_TARGET], [y_min, y_max], color=MUTED, lw=1.6,
+             ls=(0, (5, 4)), zorder=2)
+    ax.text(X_TARGET + 0.15, y_min + 0.15, r"virtual boundary, $x=x_{\mathrm{target}}$",
+             color=MUTED, fontsize=10, rotation=90, va="bottom", ha="left")
+
+    # a couple of light horizontal gridlines, with a dashed axis at y=0
+    for gy in np.arange(np.ceil(y_min / 2) * 2, y_max + 0.01, 2):
+        is_axis = abs(gy) < 1e-9
+        ax.plot([0, plot_w], [gy, gy], color=LINE if is_axis else GRID,
+                 lw=1.2 if is_axis else 1.0, ls=(0, (2, 5)) if is_axis else "-", zorder=1)
+        ax.text(-0.3, gy, f"{gy:+.0f}" if gy != 0 else "0", ha="right", va="center",
+                 fontsize=10.5, color=MUTED)
+
+    # wind zones
+    wind_center_y = y_max - 1.1
+    x0 = 0.0
+    for i, z in enumerate(ZONES):
+        width = z["dx"]
+        if i > 0:
+            ax.plot([x0, x0], [y_min, y_max], color=INK, lw=1.4, zorder=2)
+        cx_lab = x0 + width / 2
+        ax.text(cx_lab, y_max - 0.4, f"Zone {i + 1}", ha="center", fontsize=12.5,
+                 weight="bold")
+        cx, cy = z["c"]
+        speed = np.hypot(cx, cy)
+        c_dir = np.array([cx, cy]) / speed * 0.85
+        center = np.array([cx_lab, wind_center_y])
+        draw_vector(ax, center - c_dir / 2, c_dir, WIND, lw=2.6)
+        x0 += width
+
+    # drone heading arrow at every waypoint
+    for p, th in zip(pts[:-1], thetas):
+        draw_vector(ax, p, 1.1 * heading_dir(np.degrees(th)), HEADING, lw=2.2)
+
+    ax.plot(xs, ys, color=PATH, lw=3.2, solid_capstyle="round", zorder=3)
+    for p in pts[1:-1]:
+        ax.plot(*p, "o", mfc=PANEL, mec=INK, mew=1.8, ms=6.5, zorder=4)
+    ax.plot(*pts[0], "o", color=INK, ms=7, zorder=4)
+    ax.text(pts[0][0] - 0.3, pts[0][1] - 0.5, "start", ha="right", fontsize=12)
+    ax.plot(*pts[-1], "o", color=PATH, mec=PATH, ms=7, zorder=4)
+
+    # target marker
+    tx, ty = X_TARGET, Y_TARGET
+    ax.plot(tx, ty, "o", mfc="none", mec=INK, mew=2, ms=13, zorder=5)
+    ax.plot(tx, ty, "o", color=INK, ms=3, zorder=5)
+    ax.text(tx + 0.35, ty, "target", fontsize=12, va="center")
+
+    ax.set_xlim(-0.9, plot_w + 1.9)
+    ax.set_ylim(y_min - 0.3, y_max + 0.3)
+    ax.axis("off")
+
+    save(fig, "target_point")
+
+
+# ---------------------------------------------------------------------------
+# Figure: Bisection
+# ---------------------------------------------------------------------------
+
+def bisection():
     fig, ax = new_axes((9.6, 4.0), aspect_equal=False)
     ax.axis("on")
 
@@ -253,5 +360,6 @@ def generate_bisection_figure():
 
 
 if __name__ == "__main__":
-    generate_snell_law_figure()
-    generate_bisection_figure()
+    snell_law()
+    target_point()
+    bisection()
