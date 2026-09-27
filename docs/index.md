@@ -265,3 +265,11 @@ This is illustrated bellow. Each iteration is represented by a numbered dot.
 A path-planning problem that may involve many wind regions and different wind conditions can thus be reduced to a one-dimensional problem: finding the initial heading.
 
 Once this single parameter is found, the Snell-like invariant determines the heading in every subsequent region, and therefore the complete path.
+
+
+## Acknowledgements
+
+I would like to thank **Sofiane Tafat**, a former professor of physics at EISTI (now CY Tech), who first put me on the right track. He suggested the idea of looking for a solution based on "*the equivalent of Fermat’s principle for light*". I gladly credit him with this original idea, and warmly thank him for pointing me in that direction. Our correspondence at the time, however, ended with: "*It remains to solve this equation.*” :)
+
+I would also like to thank **Benjamin Parent**, a former professor of mathematics at ISEN, for his vector formulation of the problem, in particular the condition for forward motion $w>0$ as a scalar product.
+
