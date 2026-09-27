@@ -29,7 +29,10 @@ where $SX$ and $XE$ denote the distances from $S$ to $X$ and from $X$ to $E$.
 Let the crossing point move by a small displacement $dl$ along the boundary, in the direction of $\vec{u}$.
 The vector $\overrightarrow{SX}$ then changes by $+\vec{u}\,dl$, while the vector $\overrightarrow{XE}$ changes by $-\vec{u}\,dl$.
 
+![Snell's law](images/snell_law.svg)
+
 If $\theta_1$ and $\theta_2$ are the angles between the rays and the normal to the boundary (pointing from medium 1 to medium 2), measured in the same rotational sense, then projecting these displacements onto the rays shows that, for a small $dl$, the lengths $SX$ and $XE$ change by $\sin\theta_1\,dl$ and $-\sin\theta_2\,dl$.
+
 The travel time therefore changes by:
 
 $$
