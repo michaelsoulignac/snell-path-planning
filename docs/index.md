@@ -66,7 +66,7 @@ $$
 and $c$ is the speed of light in vacuum.
 
 !!! note
-The important idea for our planner is not the optical index itself, but the principle behind the derivation: Fermat's principle of stationarity.
+    The important idea for our planner is not the optical index itself, but the principle behind the derivation: Fermat's principle of stationarity.
 
 Let's apply the same reasoning to the drone!
 
@@ -97,8 +97,8 @@ For a segment with displacement $\vec{d}$, let $\tau(\vec{d})$ denote its travel
 
 Let the crossing point move by a small displacement $dl$ along the boundary, in the direction of $\vec{u}$.
 
-!!! note "Details on the two segment variations"
-Moving $X$ by $\vec{u}\,dl$ gives
+??? note "Details on the two segment variations"
+    Moving $X$ by $\vec{u}\,dl$ gives
 
     $$
     d\overrightarrow{SX}=\vec{u}\,dl,
@@ -120,9 +120,9 @@ $$
 \vec{d}-\vec{c}\tau=v\tau\,\vec{e}
 $$
 
-!!! note "Details on the differential"
-Although the heading is constant along each segment, it may vary when the segment displacement is varied.
-Taking the differential therefore gives
+??? note "Details on the differential"
+    Although the heading is constant along each segment, it may vary when the segment displacement is varied.
+    Taking the differential therefore gives:
 
     $$
     d\vec{d}-\vec{c}\,d\tau =
@@ -264,7 +264,7 @@ $$
 $$
 
 !!! warning
-This gives two mathematical solutions, but only one (the heading lying in the admissible sector defined in Section 5) corresponds to a physically valid path.
+    This gives two mathematical solutions, but only one (the heading lying in the admissible sector defined in Section 5) corresponds to a physically valid path.
 
 
 ## 5. Admissible headings
@@ -290,8 +290,8 @@ $$
 \frac{d\lambda}{d\theta} = \frac{v\cos\theta+c_x}{w^2} = \frac{g_x}{w^2}
 $$
 
-!!! note "Details on the differentiation"
-By the quotient rule,
+??? note "Details on the differentiation"
+    By the quotient rule,
 
     $$
     \frac{d\lambda}{d\theta} =
@@ -330,9 +330,9 @@ $$
 
 Thus $\lambda$ increases strictly with the heading on the admissible sector: to each admissible $\lambda$ corresponds a unique heading.
 
-!!! note "Details on the monotonicity of the vertical displacement"
-Consider a region of horizontal width $\Delta x$.
-The vertical displacement across that region is
+??? note "Details on the monotonicity of the vertical displacement"
+    Consider a region of horizontal width $\Delta x$.
+    The vertical displacement across that region is
 
     $$
     \Delta y =
@@ -382,8 +382,8 @@ Since $\lambda$ is strictly increasing with the heading in every admissible regi
 The vertical displacement across each region increases with the heading as well.
 Therefore, $y_{\text{end}}$ is strictly increasing with $\theta_0$.
 
-!!! note "Why bisection applies"
-Because $y_{\text{end}}$ is strictly increasing on the admissible interval, the equation
+??? note "Why bisection applies?"
+    Because $y_{\text{end}}$ is strictly increasing on the admissible interval, the equation
 
     $$
     y_{\text{end}}(\theta_0)=y_{\text{target}}
@@ -435,11 +435,5 @@ $$
 $$
 
 where $\vec v=v\vec e$ is the air-velocity vector.
-
-This is exactly the vector form of the identity derived in Section 2:
-
-$$
-\nabla_{\vec d}\tau=\frac{\vec e}{w}
-$$
 
 This was clearly the missing piece that made it possible to apply Fermat’s principle to the drone in practice, turning Sofiane’s intuition into a concrete derivation of the Snell law analogue.
