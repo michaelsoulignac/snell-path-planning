@@ -1,0 +1,6 @@
+.md-typeset img[src$=".svg"] {
+    max-height: 300px;
+    width: auto;
+    display: block;
+    margin: 1rem auto;
+}
