@@ -64,6 +64,7 @@ This result is known as [Snell's law](https://en.wikipedia.org/wiki/Snell%27s_la
     The optical index itself plays no role in what follows.
 
 What matters for our planner is the principle behind the derivation: Fermat's principle of stationarity.
+
 Let's apply the same reasoning to the drone!
 
 
@@ -76,14 +77,14 @@ In each wind region, the wind is assumed to be uniform, and the drone flies at t
 Within a region, the fastest way to go from one point to another is to keep a constant heading: each segment of the path is straight.
 
 ??? note "Why fly straight inside a region?"
-    Over any flight of duration $\tau$, the ground displacement is
+    Over any flight of duration $\tau$, the ground displacement is:
 
     $$
     \vec d = \int_0^\tau \big(v\vec e(t)+\vec c\big)\,dt = v\int_0^\tau \vec e(t)\,dt + \vec c\,\tau
     $$
 
     Since $\vec e$ is a unit vector, $\left|\int_0^\tau \vec e(t)\,dt\right| \le \tau$, with equality if and only if the heading is constant.
-    Reaching $\vec d$ in a time $\tau$ therefore requires
+    Reaching $\vec d$ in a time $\tau$ therefore requires:
 
     $$
     |\vec d-\vec c\,\tau| \le v\tau
@@ -91,6 +92,7 @@ Within a region, the fastest way to go from one point to another is to keep a co
 
     This fails at $\tau=0$ (since $\vec d\neq\vec 0$), so at the shortest feasible $\tau$ it holds with equality, which forces a constant heading.
     In a uniform wind, a constant heading gives a constant ground velocity, hence a straight ground track.
+
 
 Throughout this section:
 
@@ -100,16 +102,17 @@ Throughout this section:
 * $\vec{g}=v\vec{e}+\vec{c}$ is the ground velocity
 * $w=\vec{g}\cdot\vec{e}=v+\vec{c}\cdot\vec{e}$ is the component of the ground velocity along the heading
 
-We always assume $w>0$: among the ways of reaching a given point, this selects the fastest one.
+We require $w>0$: the drone must move forward along its heading.
 
 ??? note "Why must $w$ be positive?"
-    For a constant heading, the travel time $\tau$ of a segment with displacement $\vec d$ satisfies $|\vec d-\vec c\,\tau| = v\tau$, i.e. $f(\tau)=0$ with
+    For a constant heading, the travel time $\tau$ of a segment with displacement $\vec d$ satisfies $|\vec d-\vec c\,\tau| = v\tau$, i.e. $f(\tau)=0$ with:
 
     $$
     f(\tau)=|\vec d-\vec c\,\tau|^2-v^2\tau^2
     $$
 
-    When the wind is stronger than the drone ($|\vec c|>v$), this equation can have two positive roots: two different headings reach the same point, in two different times. Differentiating, and using $\vec d-\vec c\,\tau = v\tau\,\vec e$:
+    When the wind is stronger than the drone ($|\vec c|>v$), this equation can have two positive roots: two different headings reach the same point, in two different times. 
+    Differentiating, and using $\vec d-\vec c\,\tau = v\tau\,\vec e$:
 
     $$
     f'(\tau) = -2v\tau\,w
@@ -121,6 +124,7 @@ We always assume $w>0$: among the ways of reaching a given point, this selects t
     The condition $w>0$ therefore selects the fastest way. It also guarantees $f'(\tau)\neq 0$, so that $\tau$ varies smoothly with $\vec d$.
 
     If the wind is weaker than the drone ($|\vec c|<v$), then $w \ge v-|\vec c|>0$ automatically.
+
 
 Consider a drone crossing a boundary between two such wind regions, 1 and 2.
 In region $i$, the wind is $\vec{c}_i$, the drone's heading is $\vec{e}_i$, and $w_i=v+\vec{c}_i\cdot\vec{e}_i$.
@@ -159,6 +163,7 @@ $$
 
     In vector form, $\nabla_{\vec d}\tau = \vec e/w$: this is the gradient mentioned in the acknowledgements.
 
+
 Moving $X$ by $\vec u\,dl$ changes $\overrightarrow{SX}$ by $+\vec{u}\,dl$ and $\overrightarrow{XE}$ by $-\vec{u}\,dl$. Applying the relation above to the two segments gives:
 
 $$
@@ -174,8 +179,7 @@ Therefore, the total travel time changes by:
 $$
 dT =
 \left(
-\frac{\vec{u}\cdot\vec{e}_1}{w_1}
--
+\frac{\vec{u}\cdot\vec{e}_1}{w_1} -
 \frac{\vec{u}\cdot\vec{e}_2}{w_2}
 \right)
 dl
@@ -275,7 +279,7 @@ These admissible headings form a single angular sector, determined by the wind a
     \cos(a+b)=\cos a\cos b-\sin a\sin b<\cos a\cos b = \cos\alpha
     $$
 
-    we get $|\alpha|<a+b$. When $a+b\ge\pi$, this holds trivially.
+    We get $|\alpha|<a+b$. When $a+b\ge\pi$, this holds trivially.
 
 
 ## 5. Monotonicity of $\lambda$
@@ -287,7 +291,7 @@ $$
 $$
 
 ??? note "Why does the derivative simplify so nicely?"
-    By the quotient rule,
+    By the quotient rule:
 
     $$
     \frac{d\lambda}{d\theta} =
@@ -300,8 +304,8 @@ $$
 
     $$
     \cos\theta\left(v+c_x\cos\theta+c_y\sin\theta\right) -
-    \sin\theta\left(-c_x\sin\theta+c_y\cos\theta\right)
-    = v\cos\theta+c_x
+    \sin\theta\left(-c_x\sin\theta+c_y\cos\theta\right) =
+    v\cos\theta+c_x
     $$
 
 On the admissible sector, $g_x>0$ and $w>0$, so:
@@ -343,6 +347,7 @@ $$
 
     Since $R\sin(\theta-\phi) = R\cos\phi\,\sin\theta - R\sin\phi\,\cos\theta$, the left-hand side equals $R\sin(\theta-\phi)$ with $R\cos\phi=A$ and $R\sin\phi=B$.
 
+
 This equation has two mathematical solutions, but only one can be admissible:
 
 $$
@@ -374,6 +379,7 @@ Equivalently, $\lambda$ must lie in the interval $(\lambda_{\min},\lambda_{\max}
 
     An admissible heading has $g_x>0$ and $w>0$, so $\cos(\theta-\phi)>0$: $\theta-\phi$ lies in $(-\pi/2,\pi/2)$, which is exactly the $\arcsin$ branch.
     The other solution has $\cos(\theta-\phi)<0$, so $g_x$ and $w$ have opposite signs: it is never admissible.
+
 
 ??? note "Does light do this too?"
     Yes. When light goes from a slow medium to a fast one, Snell's law asks for $\sin\theta_2 = (n_1/n_2)\sin\theta_1$, which exceeds 1 beyond a critical angle.
@@ -412,7 +418,7 @@ Therefore, $y_{\text{end}}$ is strictly increasing with $\theta_0$.
 
 ??? note "Why does turning left always end higher?"
     Consider a region of horizontal width $\Delta x$.
-    The vertical displacement across that region is
+    The vertical displacement across that region is:
 
     $$
     \Delta y =
@@ -420,7 +426,7 @@ Therefore, $y_{\text{end}}$ is strictly increasing with $\theta_0$.
     \Delta x\,\frac{v\sin\theta+c_y}{v\cos\theta+c_x}
     $$
 
-    Differentiating with respect to $\theta$ gives
+    Differentiating with respect to $\theta$ gives:
 
     $$
     \frac{d(\Delta y)}{d\theta} =
@@ -428,6 +434,7 @@ Therefore, $y_{\text{end}}$ is strictly increasing with $\theta_0$.
     $$
 
     On the admissible sector, $w>0$. Since $\Delta x>0$ and $v>0$, the vertical displacement across a region is strictly increasing with the heading.
+
 
 The launch headings to consider are those whose $\lambda$ is admissible in every region, i.e. lies in the intersection of the intervals $(\lambda_{\min},\lambda_{\max})$ of all regions.
 Mapped back to the first region (Section 6), this intersection directly gives the initial interval $[\theta_{\min},\theta_{\max}]$ for bisection.
@@ -448,6 +455,7 @@ If every wind is weaker than the drone, every target is reachable. With stronger
     With stronger winds, an end may be infinite: $y_{\text{end}}$ then tends to a finite limit, and targets beyond it are out of reach.
     The intersection may even be empty, for instance if a headwind $c_x\le -v$ blocks a region.
 
+
 Bisection proceeds as follows:
 
 * Starting from an interval $[\theta_{\min}, \theta_{\max}]$ of admissible launch headings, on which $y_{\text{end}}$ changes sign relative to $y_{\text{target}}$, the interval is repeatedly halved, keeping the half on which the sign change still occurs.
@@ -464,7 +472,7 @@ Bisection proceeds as follows:
 
     As long as all headings remain admissible, $y_{\text{end}}(\theta_0)$ depends continuously on $\theta_0$.
 
-    Therefore, if an interval $[\theta_{\min},\theta_{\max}]$ satisfies
+    Therefore, if an interval $[\theta_{\min},\theta_{\max}]$ satisfies:
 
     $$
     \big(y_{\text{end}}(\theta_{\min})-y_{\text{target}}\big)
