@@ -1,11 +1,156 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>A Drone That Follows Light</title>
+    <style>
+        /* ---------- Theme (light / dark) ---------- */
+        :root {
+            --paper: #eaf0f5; --panel: #f8fafc; --ink: #12203a; --muted: #5a6a80;
+            --line: #c9d5e0; --grid: #d9e2ea; --wind: #0d8a8c;
+            --scene-max-height: 500px;   /* maximum height of the scene on the page */
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --paper: #0d1520; --panel: #132030; --ink: #e6edf5; --muted: #93a3b6;
+                --line: #28394c; --grid: #1d2c3d; --wind: #4fc6c8;
+            }
+        }
+
+        /* ---------- Page layout ---------- */
+        * { box-sizing: border-box; }
+        html, body { margin: 0; background: var(--paper); color: var(--ink); }
+        body {
+            font: 15px/1.55 "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+            font-variant-numeric: tabular-nums;
+        }
+        .wrap { max-width: 1180px; margin: 0 auto; padding: 26px 16px 44px; }
+        h1 {
+            font-size: clamp(26px, 4.2vw, 40px); line-height: 1.08; letter-spacing: -.025em;
+            font-weight: 680; margin: 0 0 20px; max-width: 24ch;
+        }
+        .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
+
+        /* ---------- Legend ---------- */
+        .legend { display: flex; flex-wrap: wrap; gap: 6px 20px; padding: 9px 14px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
+        .legend i { display: inline-block; vertical-align: middle; margin-right: 7px; }
+        .sw-wind { width: 22px; border-top: 3.5px solid var(--wind); }
+
+        /* ---------- Scene (SVG) ---------- */
+        .scene-scroll { overflow-x: auto; }   /* narrow screens: scroll rather than squash */
+        #scene { display: block; width: 100%; min-width: 680px; height: auto; max-height: var(--scene-max-height); }
+
+        svg text { font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, sans-serif; fill: var(--ink); }
+        .zone-title { font-size: 13px; font-weight: 650; text-anchor: middle; }
+        .zone-sub { font-size: 12px; text-anchor: middle; fill: var(--muted); }
+        .tick { font-size: 11.5px; fill: var(--muted); }
+
+        .grid { stroke: var(--grid); stroke-width: 1; }
+        .axis0 { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 5; }
+        .plot-border { fill: none; stroke: var(--ink); stroke-width: 1.5; }
+        .frontier { stroke: var(--ink); stroke-width: 1.5; }
+        .wind-arrow { stroke: var(--wind); fill: var(--wind); stroke-width: 3.5; }
+    </style>
 </head>
 <body>
-<h1>A Drone That Follows Light</h1>
+<div class="wrap">
+    <header><h1>A Drone That Follows Light</h1></header>
+
+    <section class="panel" aria-label="Simulation">
+        <div class="scene-scroll"><svg id="scene" role="img" aria-label="Zones of wind, side by side"></svg></div>
+        <div class="legend">
+            <span><i class="sw-wind"></i>wind in the zone (direction and strength)</span>
+        </div>
+    </section>
+</div>
+
+<script>
+    /* ---------- Configuration (distances in km, speeds in km/h, angles in degrees) ---------- */
+
+    /* Wind of each zone, in the order they are crossed.
+       dirDeg is the direction the wind blows towards (0 = east, 90 = north).
+       Add or remove entries: the drawing adapts to the number of zones. */
+    const WINDS = [
+        { speedKmh: 50, dirDeg: 60 },
+        { speedKmh: 75, dirDeg: 15 },
+        { speedKmh: 70, dirDeg: -30 },
+        { speedKmh: 55, dirDeg: -75 },
+    ];
+
+    const SCENE = {
+        zoneWidthKm: 10,
+        halfHeightKm: 10,           // half-length of every frontier (the scene spans -10 to +10 km vertically)
+        viewWidthPx: 960,           // the scale (pixels per km) follows from this width and the number of zones
+        margin: { left: 60, right: 60, top: 46, bottom: 34 },
+        tickStepKm: 5,
+        windArrowPxPerKmh: 0.55,    // half-length of the wind arrow per km/h of wind (before capping to the zone width)
+    };
+
+    /* ---------- Helpers ---------- */
+
+    const rad = degrees => (degrees * Math.PI) / 180;
+    const coord = x => x.toFixed(1);   // SVG coordinates, one decimal is enough
+
+    /* Line with an arrowhead, from (x1, y1) to (x2, y2), in pixels. */
+    function arrow(x1, y1, x2, y2, className, headSize = 10) {
+        const dx = x2 - x1, dy = y2 - y1, length = Math.hypot(dx, dy);
+        if (length < 2) return '';
+        const ux = dx / length, uy = dy / length, h = Math.min(headSize, length * 0.6);
+        const bx = x2 - ux * h, by = y2 - uy * h, px = -uy * h * 0.5, py = ux * h * 0.5;   // base of the head, and its half-width offset
+        return `<line x1="${coord(x1)}" y1="${coord(y1)}" x2="${coord(bx)}" y2="${coord(by)}" class="${className}"/>`
+            + `<polygon points="${coord(x2)},${coord(y2)} ${coord(bx + px)},${coord(by + py)} ${coord(bx - px)},${coord(by - py)}" class="${className}"/>`;
+    }
+
+    /* ---------- Scene geometry ---------- */
+
+    const { zoneWidthKm, halfHeightKm, viewWidthPx, margin, tickStepKm, windArrowPxPerKmh } = SCENE;
+    const zoneCount = WINDS.length;
+
+    const plotWidth = viewWidthPx - margin.left - margin.right;
+    const pxPerKm = plotWidth / (zoneCount * zoneWidthKm);   // the zones always fill the plot width
+    const plotHeight = 2 * halfHeightKm * pxPerKm;
+    const zoneWidthPx = zoneWidthKm * pxPerKm;
+    const viewHeight = margin.top + plotHeight + margin.bottom;
+    const originY = margin.top + plotHeight / 2;              // pixel ordinate of y = 0
+
+    const toX = km => margin.left + km * pxPerKm;
+    const toY = km => originY - km * pxPerKm;                 // y axis points up, SVG's points down
+
+    /* ---------- Drawing ---------- */
+
+    /* Horizontal graduations, plot border and the frontiers between zones. */
+    function drawGrid() {
+        let markup = '';
+        for (let y = -halfHeightKm; y <= halfHeightKm; y += tickStepKm) {
+            markup += `<line class="${y === 0 ? 'axis0' : 'grid'}" x1="${margin.left}" x2="${margin.left + plotWidth}" y1="${coord(toY(y))}" y2="${coord(toY(y))}"/>`
+                + `<text class="tick" x="${margin.left - 8}" y="${coord(toY(y) + 4)}" text-anchor="end">${y > 0 ? '+' : y < 0 ? '−' : ''}${Math.abs(y)}</text>`;
+        }
+        markup += `<text class="tick" x="${margin.left - 8}" y="${margin.top - 8}" text-anchor="end">km</text>`
+            + `<rect class="plot-border" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"/>`;
+        for (let k = 0; k <= zoneCount; k++)
+            markup += `<line class="frontier" x1="${coord(toX(k * zoneWidthKm))}" x2="${coord(toX(k * zoneWidthKm))}" y1="${margin.top}" y2="${margin.top + plotHeight}"/>`;
+        return markup;
+    }
+
+    /* Wind arrow and title of every zone. */
+    function drawZones() {
+        let markup = '';
+        const arrowY = margin.top + 60;
+        WINDS.forEach((wind, k) => {
+            const centerX = toX(k * zoneWidthKm) + zoneWidthPx / 2;
+            const half = Math.min(wind.speedKmh * windArrowPxPerKmh, zoneWidthPx * 0.4);   // the arrow stays inside its zone
+            const ux = Math.cos(rad(wind.dirDeg)), uy = -Math.sin(rad(wind.dirDeg));       // unit vector in pixels (y flipped)
+            markup += arrow(centerX - ux * half, arrowY - uy * half, centerX + ux * half, arrowY + uy * half, 'wind-arrow', 12)
+                + `<text class="zone-title" x="${coord(centerX)}" y="24">Zone ${k + 1}</text>`
+                + `<text class="zone-sub" x="${coord(centerX)}" y="40">wind ${wind.speedKmh} km/h</text>`;
+        });
+        return markup;
+    }
+
+    const scene = document.getElementById('scene');
+    scene.setAttribute('viewBox', `0 0 ${viewWidthPx} ${coord(viewHeight)}`);
+    scene.innerHTML = drawZones() + drawGrid();
+</script>
 </body>
 </html>
