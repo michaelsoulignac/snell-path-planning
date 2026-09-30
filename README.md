@@ -13,43 +13,51 @@ This project has two main objectives:
 
 ## Demonstration app
 
-WIP : https://michaelsoulignac.github.io/snell-path-planning/
+**Work in progress:** the application is still under development and not yet complete.
 
+- **Technologies:** vanilla JavaScript (no framework), SVG for the drawings
+- **Live demo:** [michaelsoulignac.github.io/snell-path-planning](https://michaelsoulignac.github.io/snell-path-planning/)
 
 ## The maths under the hood
 
-This article derives the planner step by step, starting from [Fermat's principle](https://en.wikipedia.org/wiki/Fermat%27s_principle) :
+**Read the full derivation [here](https://michaelsoulignac.github.io/snell-path-planning/math/)**
 
-https://michaelsoulignac.github.io/snell-path-planning/math/
-
+This article derives the planner step by step, starting from [Fermat's principle](https://en.wikipedia.org/wiki/Fermat%27s_principle).
 
 The underlying source code combines [Markdown](https://www.markdownguide.org/) for the text and structure with [LaTeX](https://www.latex-project.org/) for mathematical notation. It is generated with [MkDocs](https://www.mkdocs.org/).
 
 The public documentation is automatically rebuilt and deployed with [GitHub Actions](https://docs.github.com/en/actions) on pushs to the `main` branch.
 
-
-### Run the documentation locally
+## Local execution
 
 First, make sure [Python](https://www.python.org/) is installed.
 
+Each of the two servers below defaults to port 8000. Once running, browse to [http://127.0.0.1:8000/](http://127.0.0.1:8000/) to see the result.
+
+### Demonstration app
+
+From the project root, launch a web server:
+
+```bash
+python -m http.server
+```
+
+### Documentation
+
 Install MkDocs Material:
 
-```
+```bash
 pip install mkdocs-material
 ```
 
-Then, go to the project root directory, and start the local development server:
+From the project root, start the local development server:
 
-```
+```bash
 python -m mkdocs serve
 ```
 
-The documentation is then available at:
-
-http://127.0.0.1:8000/
-
 To generate the static site without starting the development server:
 
-```
+```bash
 python -m mkdocs build
 ```
