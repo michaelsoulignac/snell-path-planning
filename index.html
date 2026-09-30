@@ -27,6 +27,23 @@
         }
         .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
 
+        /* Layout: controls on the left, scene and legend on the right */
+        .layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); }
+        .scene-area { min-width: 0; }
+        .controls { display: flex; flex-direction: column; border-right: 1px solid var(--line); }
+
+        @media (max-width: 900px) {   /* narrow screens: controls below the scene */
+            .layout { grid-template-columns: 1fr; }
+            .controls { order: 2; border-right: 0; border-top: 1px solid var(--line); }
+        }
+
+        /* ---------- Controls ---------- */
+        .control { padding: 14px 18px 12px; }
+        .control label { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+        .control output { font-weight: 500; color: var(--path); }
+        input[type=range] { width: 100%; accent-color: var(--path); height: 28px; margin: 0; }
+        input:focus-visible { outline: 2px solid var(--path); outline-offset: 2px; }
+
         /* ---------- Legend ---------- */
         .legend { display: flex; flex-wrap: wrap; gap: 6px 20px; padding: 9px 14px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
         .legend i { display: inline-block; vertical-align: middle; margin-right: 7px; }
@@ -63,12 +80,20 @@
 <div class="wrap">
     <header><h1>A Drone That Follows Light</h1></header>
 
-    <section class="panel" aria-label="Simulation">
-        <div class="scene-scroll"><svg id="scene" role="img" aria-label="A drone crossing zones of wind from left to right"></svg></div>
-        <div class="legend">
-            <span><i class="sw-wind"></i>wind in the zone</span>
-            <span><i class="sw-heading"></i>heading (relative to the air)</span>
-            <span><i class="sw-path"></i>path of the drone</span>
+    <section class="panel layout" aria-label="Simulation">
+        <div class="controls" aria-label="Controls">
+            <div class="control">
+                <label for="speed"><span>Drone airspeed</span><output id="speedOut"></output></label>
+                <input id="speed" type="range">
+            </div>
+        </div>
+        <div class="scene-area">
+            <div class="scene-scroll"><svg id="scene" role="img" aria-label="A drone crossing zones of wind from left to right"></svg></div>
+            <div class="legend">
+                <span><i class="sw-wind"></i>wind in the zone</span>
+                <span><i class="sw-heading"></i>heading (relative to the air)</span>
+                <span><i class="sw-path"></i>path of the drone</span>
+            </div>
         </div>
     </section>
 </div>
@@ -85,8 +110,8 @@
         { speedKmh: 55, dirDeg: -75 },
     ];
 
-    const AIRSPEED_KMH = 50;    // airspeed of the drone
-    const LAMBDA = 0;           // Snell-like invariant, shared by all zones
+    const AIRSPEED = { minKmh: 20, maxKmh: 200, stepKmh: 1, defaultKmh: 50 };   // range of the airspeed slider
+    const LAMBDA = 0;                                                           // Snell-like invariant, shared by all zones
 
     const SCENE = {
         zoneWidthKm: 10,
@@ -109,9 +134,14 @@
     // Arrow from (x1, y1) to (x2, y2), in pixels.
     function arrow(x1, y1, x2, y2, className, headSize = 10) {
         const dx = x2 - x1, dy = y2 - y1, length = Math.hypot(dx, dy);
-        if (length < 2) return '';
+
+        if (length < 2) {
+            return '';
+        }
+
         const ux = dx / length, uy = dy / length, h = Math.min(headSize, length * 0.6);
         const bx = x2 - ux * h, by = y2 - uy * h, px = -uy * h * 0.5, py = ux * h * 0.5;   // base of the arrowhead and its half-width offset
+
         return `<line x1="${coord(x1)}" y1="${coord(y1)}" x2="${coord(bx)}" y2="${coord(by)}" class="${className}"/>`
             + `<polygon points="${coord(x2)},${coord(y2)} ${coord(bx + px)},${coord(by + py)} ${coord(bx - px)},${coord(by - py)}" class="${className}"/>`;
     }
@@ -129,9 +159,14 @@
     function headingFromLambda(wind, v, lambda) {
         const A = 1 - lambda * wind.cy, B = lambda * wind.cx, R = Math.hypot(A, B), phi = Math.atan2(B, A);
         const s = lambda * v / R;
-        if (Math.abs(s) >= 1) return null;
+
+        if (Math.abs(s) >= 1) {
+            return null;
+        }
+
         const t = phi + Math.asin(s);
         const gx = v * Math.cos(t) + wind.cx, w = v + wind.cx * Math.cos(t) + wind.cy * Math.sin(t);
+
         return gx > 0 && w > 0 ? t : null;
     }
 
@@ -153,7 +188,9 @@
 
     // Abscissas (km) of the leg boundaries, from the start (left of the first zone) to the end (right of the last zone).
     const xs = [-STILL_AIR.entryKm];
-    legs.forEach(leg => xs.push(xs[xs.length - 1] + leg.dx));
+    legs.forEach(leg => {
+        xs.push(xs[xs.length - 1] + leg.dx);
+    });
 
     // Scene scale: the horizontal extent covers the zones, the still-air regions and their padding.
     const leftKm = STILL_AIR.entryKm + STILL_AIR.sidePaddingKm, rightKm = STILL_AIR.exitKm + STILL_AIR.sidePaddingKm;
@@ -174,13 +211,23 @@
     function propagate(v, lambda) {
         const ys = [0], headings = [];
         let ok = true;
+
         for (const leg of legs) {
             const t = headingFromLambda(leg.wind, v, lambda);
-            if (t === null) { ok = false; break; }
+
+            if (t === null) {
+                ok = false;
+                break;
+            }
+
             headings.push(t);
             ys.push(ys[ys.length - 1] + verticalShift(leg.wind, v, t, leg.dx));
         }
-        if (ys.some(y => Math.abs(y) > halfHeightKm)) ok = false;
+
+        if (ys.some(y => Math.abs(y) > halfHeightKm)) {
+            ok = false;
+        }
+
         return { ys, headings, ok };
     }
 
@@ -189,14 +236,19 @@
     // Horizontal grid lines, plot border and the frontiers between zones.
     function drawGrid() {
         let markup = '';
+
         for (let y = -halfHeightKm; y <= halfHeightKm; y += tickStepKm) {
             markup += `<line class="${y === 0 ? 'axis0' : 'grid'}" x1="${margin.left}" x2="${margin.left + plotWidth}" y1="${coord(toY(y))}" y2="${coord(toY(y))}"/>`
                 + `<text class="tick" x="${margin.left - 8}" y="${coord(toY(y) + 4)}" text-anchor="end">${y > 0 ? '+' : y < 0 ? '−' : ''}${Math.abs(y)}</text>`;
         }
+
         markup += `<text class="tick" x="${margin.left - 8}" y="${margin.top - 8}" text-anchor="end">km</text>`
             + `<rect class="plot-border" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"/>`;
-        for (let k = 0; k <= zoneCount; k++)
+
+        for (let k = 0; k <= zoneCount; k++) {
             markup += `<line class="frontier" x1="${coord(toX(k * zoneWidthKm))}" x2="${coord(toX(k * zoneWidthKm))}" y1="${margin.top}" y2="${margin.top + plotHeight}"/>`;
+        }
+
         return markup;
     }
 
@@ -204,14 +256,17 @@
     function drawZones(airspeed) {
         let markup = '';
         const arrowY = margin.top + 60;
+
         WINDS.forEach((wind, k) => {
             const centerX = toX(k * zoneWidthKm) + zoneWidthPx / 2;
             const half = Math.min(wind.speedKmh * windArrowPxPerKmh, zoneWidthPx * 0.4);   // the arrow stays inside its zone
             const ux = Math.cos(rad(wind.dirDeg)), uy = -Math.sin(rad(wind.dirDeg));       // unit vector in pixels (y flipped)
+
             markup += arrow(centerX - ux * half, arrowY - uy * half, centerX + ux * half, arrowY + uy * half, 'wind-arrow', 12)
                 + `<text class="zone-title" x="${coord(centerX)}" y="24">Zone ${k + 1}</text>`
                 + `<text class="zone-sub" x="${coord(centerX)}" y="40">wind ${wind.speedKmh} km/h, c/v = ${(wind.speedKmh / airspeed).toFixed(2)}</text>`;
         });
+
         return markup;
     }
 
@@ -219,38 +274,71 @@
     function drawPath(ys) {
         const legLines = ys.slice(1).map((y, k) =>
             `<line class="leg" x1="${coord(toX(xs[k]))}" y1="${coord(toY(ys[k]))}" x2="${coord(toX(xs[k + 1]))}" y2="${coord(toY(y))}"/>`);
+
         return `<g class="path">${legLines.join('')}</g>`;
     }
 
     const drawWaypoint = (x, y, className = 'waypoint', radius = 5) =>
         `<circle class="${className}" cx="${coord(toX(x))}" cy="${coord(toY(y))}" r="${radius}"/>`;
 
-    function render() {
-        const { ys, headings, ok } = propagate(AIRSPEED_KMH, LAMBDA);
+    function render(airspeed) {
+        const { ys, headings, ok } = propagate(airspeed, LAMBDA);
         const startX = toX(xs[0]), startY = toY(ys[0]);
 
         let markup = `<defs><clipPath id="plot"><rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"/></clipPath></defs>`
-            + drawZones(AIRSPEED_KMH) + drawGrid();
+            + drawZones(airspeed) + drawGrid();
+
         markup += `<g clip-path="url(#plot)">${drawPath(ys)}</g>`;
 
         // Heading in the first leg (the pixel y axis points down).
-        if (headings.length) {
+        if (headings.length > 0) {
             const t = headings[0], len = SCENE.headingArrowPx;
             markup += arrow(startX, startY, startX + len * Math.cos(t), startY - len * Math.sin(t), 'heading-arrow', 11);
         }
-        for (let k = 1; k < ys.length - 1; k++) markup += drawWaypoint(xs[k], ys[k]);
-        if (ys.length === xs.length) markup += drawWaypoint(xs[xs.length - 1], ys[ys.length - 1], 'endpoint', 6);
+
+        for (let k = 1; k < ys.length - 1; k++) {
+            markup += drawWaypoint(xs[k], ys[k]);
+        }
+
+        if (ys.length === xs.length) {
+            markup += drawWaypoint(xs[xs.length - 1], ys[ys.length - 1], 'endpoint', 6);
+        }
+
         markup += drawWaypoint(xs[0], ys[0], 'start-point', 6)
             + `<text class="label halo" x="${coord(startX)}" y="${coord(startY + 26)}" text-anchor="middle">start</text>`;
-        if (!ok)
+
+        if (!ok) {
             markup += `<text class="banner halo" x="${margin.left + plotWidth / 2}" y="${margin.top + plotHeight - 16}">No path: at this speed, the wind pushes the drone beyond the frontiers.</text>`;
+        }
 
         const scene = document.getElementById('scene');
         scene.setAttribute('viewBox', `0 0 ${viewWidthPx} ${coord(viewHeight)}`);
         scene.innerHTML = markup;
     }
 
-    render();
+    /* ---------- Controls ---------- */
+
+    // Configures the airspeed slider and calls onChange(airspeed in km/h) whenever it moves.
+    function setupSpeedSlider(input, output, onChange) {
+        input.min = AIRSPEED.minKmh;   // bounds first, so the value is not clamped by old bounds
+        input.max = AIRSPEED.maxKmh;
+        input.step = AIRSPEED.stepKmh;
+        input.value = AIRSPEED.defaultKmh;
+
+        const showValue = () => {
+            output.textContent = `${input.value} km/h`;
+        };
+
+        input.addEventListener('input', () => {
+            showValue();
+            onChange(Number(input.value));
+        });
+
+        showValue();
+    }
+
+    setupSpeedSlider(document.getElementById('speed'), document.getElementById('speedOut'), render);
+    render(AIRSPEED.defaultKmh);
 </script>
 </body>
 </html>
