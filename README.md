@@ -13,18 +13,20 @@ This project has two main objectives:
 
 ## Demonstration app
 
-TODO
+WIP : https://michaelsoulignac.github.io/snell-path-planning/
+
 
 ## The maths under the hood
 
-The documentation derives the planner step by step, starting from [Fermat's principle](https://en.wikipedia.org/wiki/Fermat%27s_principle) :
+This article derives the planner step by step, starting from [Fermat's principle](https://en.wikipedia.org/wiki/Fermat%27s_principle) :
 
 https://michaelsoulignac.github.io/snell-path-planning/math/
 
 
-The documentation combines [Markdown](https://www.markdownguide.org/) for the text and structure with [LaTeX](https://www.latex-project.org/) for mathematical notation. It is generated with [MkDocs](https://www.mkdocs.org/).
+The underlying source code combines [Markdown](https://www.markdownguide.org/) for the text and structure with [LaTeX](https://www.latex-project.org/) for mathematical notation. It is generated with [MkDocs](https://www.mkdocs.org/).
 
 The public documentation is automatically rebuilt and deployed with [GitHub Actions](https://docs.github.com/en/actions) on pushs to the `main` branch.
+
 
 ### Run the documentation locally
 
