@@ -1,351 +1,421 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>A Drone That Follows Light</title>
-    <style>
-        /* ---------- Theme ---------- */
-        :root {
-            --paper: #eaf0f5; --panel: #f8fafc; --ink: #12203a; --muted: #5a6a80;
-            --line: #c9d5e0; --grid: #d9e2ea; --wind: #0d8a8c;
-            --path: #14612f; --heading: #3549d1; --bad: #b3261e;
-            --scene-max-height: 500px;   /* maximum height of the scene on the page */
-        }
-
-        /* ---------- Page layout ---------- */
-        * { box-sizing: border-box; }
-        html, body { margin: 0; background: var(--paper); color: var(--ink); }
-        body {
-            font: 15px/1.55 "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
-            font-variant-numeric: tabular-nums;
-        }
-        .wrap { max-width: 1180px; margin: 0 auto; padding: 26px 16px 44px; }
-        h1 {
-            font-size: clamp(26px, 4.2vw, 40px); line-height: 1.08; letter-spacing: -.025em;
-            font-weight: 680; margin: 0 0 20px; max-width: 24ch;
-        }
-        .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
-
-        /* Layout: controls on the left, scene and legend on the right */
-        .layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); }
-        .scene-area { min-width: 0; }
-        .controls { display: flex; flex-direction: column; border-right: 1px solid var(--line); }
-
-        @media (max-width: 900px) {   /* narrow screens: controls below the scene */
-            .layout { grid-template-columns: 1fr; }
-            .controls { order: 2; border-right: 0; border-top: 1px solid var(--line); }
-        }
-
-        /* ---------- Controls ---------- */
-        .control { padding: 14px 18px 12px; }
-        .control label { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; font-weight: 600; margin-bottom: 2px; }
-        .control output { font-weight: 500; color: var(--path); }
-        input[type=range] { width: 100%; accent-color: var(--path); height: 28px; margin: 0; }
-        input:focus-visible { outline: 2px solid var(--path); outline-offset: 2px; }
-
-        /* ---------- Legend ---------- */
-        .legend { display: flex; flex-wrap: wrap; gap: 6px 20px; padding: 9px 14px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
-        .legend i { display: inline-block; vertical-align: middle; margin-right: 7px; }
-        .sw-wind { width: 22px; border-top: 3.5px solid var(--wind); }
-        .sw-heading { width: 22px; border-top: 3px solid var(--heading); }
-        .sw-path { width: 22px; border-top: 3.4px solid var(--path); }
-
-        /* ---------- Scene (SVG) ---------- */
-        .scene-scroll { overflow-x: auto; }   /* narrow screens: scroll instead of squeezing the scene */
-        #scene { display: block; width: 100%; min-width: 680px; height: auto; max-height: var(--scene-max-height); }
-
-        svg text { font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, sans-serif; fill: var(--ink); }
-        .zone-title { font-size: 13px; font-weight: 650; text-anchor: middle; }
-        .zone-sub { font-size: 12px; text-anchor: middle; fill: var(--muted); }
-        .tick { font-size: 11.5px; fill: var(--muted); }
-        .label { font-size: 12.5px; font-weight: 600; }
-        .halo { paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; }   /* keeps text readable over lines */
-        .banner { font-size: 14.5px; font-weight: 650; text-anchor: middle; fill: var(--bad); }
-
-        .grid { stroke: var(--grid); stroke-width: 1; }
-        .axis0 { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 5; }
-        .plot-border { fill: none; stroke: var(--ink); stroke-width: 1.5; }
-        .frontier { stroke: var(--ink); stroke-width: 1.5; }
-        .wind-arrow { stroke: var(--wind); fill: var(--wind); stroke-width: 3.5; }
-        .heading-arrow { stroke: var(--heading); fill: var(--heading); stroke-width: 3; }
-
-        .path .leg { stroke: var(--path); stroke-width: 3.4; stroke-linecap: round; }
-        .waypoint { fill: var(--panel); stroke: var(--ink); stroke-width: 2; }
-        .start-point { fill: var(--ink); stroke: var(--ink); stroke-width: 2; }
-        .endpoint { fill: var(--path); stroke: var(--panel); stroke-width: 2; }
-
-        /* ---------- Footer ---------- */
-        .site-footer { background: var(--ink); color: var(--paper); font-size: 13px; }
-        .site-footer-inner { max-width: 1180px; margin: 0 auto; padding: 14px 16px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 28px; }
-        .site-footer a { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, var(--paper) 45%, transparent); }
-        .site-footer a:hover { text-decoration-color: currentColor; }
-        .site-footer a:focus-visible { outline: 2px solid var(--paper); outline-offset: 3px; }
-    </style>
-</head>
-<body>
-<div class="wrap">
-    <header><h1>A Drone That Follows Light</h1></header>
-
-    <section class="panel layout" aria-label="Simulation">
-        <div class="controls" aria-label="Controls">
-            <div class="control">
-                <label for="speed"><span>Drone airspeed</span><output id="speedOut"></output></label>
-                <input id="speed" type="range">
-            </div>
-        </div>
-        <div class="scene-area">
-            <div class="scene-scroll"><svg id="scene" role="img" aria-label="A drone crossing zones of wind from left to right"></svg></div>
-            <div class="legend">
-                <span><i class="sw-wind"></i>wind in the zone</span>
-                <span><i class="sw-heading"></i>heading (relative to the air)</span>
-                <span><i class="sw-path"></i>path of the drone</span>
-            </div>
-        </div>
-    </section>
-</div>
-
-<script>
-    /* ---------- Configuration (distances in km, speeds in km/h, angles in degrees) ---------- */
-
-    /* Wind of each zone, from left to right on screen.
-       dirDeg is measured from the horizontal, counterclockwise (0 = east, 90 = north). */
-    const WINDS = [
-        { speedKmh: 50, dirDeg: 60 },
-        { speedKmh: 75, dirDeg: 15 },
-        { speedKmh: 70, dirDeg: -30 },
-        { speedKmh: 55, dirDeg: -75 },
-    ];
-
-    const AIRSPEED = { minKmh: 20, maxKmh: 200, stepKmh: 1, defaultKmh: 50 };   // range of the airspeed slider
-    const LAMBDA = 0;                                                           // Snell-like invariant, shared by all zones
-
-    const SCENE = {
-        zoneWidthKm: 10,
-        halfHeightKm: 10,         // half-height of every frontier
-        viewWidthPx: 960,         // the scale (pixels per km) follows from this width and the horizontal extent
-        headingArrowPx: 46,
-        margin: { left: 60, right: 60, top: 46, bottom: 34 },
-        tickStepKm: 5,
-        windArrowPxPerKmh: 0.55,  // half-length of the wind arrow per km/h of wind (capped so that it fits in the zone)
-    };
-
-    // Still-air regions before the first zone and after the last one.
-    const STILL_AIR = { entryKm: 4, exitKm: 3, sidePaddingKm: 1 };
-
-    /* ---------- Helpers ---------- */
-
-    const rad = degrees => (degrees * Math.PI) / 180;
-    const coord = x => x.toFixed(1);   // SVG coordinates: one decimal is enough
-
-    // Arrow from (x1, y1) to (x2, y2), in pixels.
-    function arrow(x1, y1, x2, y2, className, headSize = 10) {
-        const dx = x2 - x1, dy = y2 - y1, length = Math.hypot(dx, dy);
-
-        if (length < 2) {
-            return '';
-        }
-
-        const ux = dx / length, uy = dy / length, h = Math.min(headSize, length * 0.6);
-        const bx = x2 - ux * h, by = y2 - uy * h, px = -uy * h * 0.5, py = ux * h * 0.5;   // base of the arrowhead and its half-width offset
-
-        return `<line x1="${coord(x1)}" y1="${coord(y1)}" x2="${coord(bx)}" y2="${coord(by)}" class="${className}"/>`
-            + `<polygon points="${coord(x2)},${coord(y2)} ${coord(bx + px)},${coord(by + py)} ${coord(bx - px)},${coord(by - py)}" class="${className}"/>`;
-    }
-
-    /* ---------- Physics (pure computation) ----------
-       Conventions: x = east (direction of travel), y = north, headings in radians.
-       Heading e = (cos t, sin t), ground velocity g = v e + c, w = v + c.e
-       Along the path, lambda = sin(t) / w is the same in every zone (Snell-like invariant). */
-
-    const toWindVector = ({ speedKmh, dirDeg }) => ({ cx: speedKmh * Math.cos(rad(dirDeg)), cy: speedKmh * Math.sin(rad(dirDeg)) });
-
-    /* Heading in a zone of wind c for a given lambda: sin(t - phi) = lambda v / R.
-       Only the arcsine branch can be admissible. Returns null if no admissible heading exists
-       (no solution, or the drone cannot move forward: gx <= 0 or w <= 0). */
-    function headingFromLambda(wind, v, lambda) {
-        const A = 1 - lambda * wind.cy, B = lambda * wind.cx, R = Math.hypot(A, B), phi = Math.atan2(B, A);
-        const s = lambda * v / R;
-
-        if (Math.abs(s) >= 1) {
-            return null;
-        }
-
-        const t = phi + Math.asin(s);
-        const gx = v * Math.cos(t) + wind.cx, w = v + wind.cx * Math.cos(t) + wind.cy * Math.sin(t);
-
-        return gx > 0 && w > 0 ? t : null;
-    }
-
-    // Vertical shift across a zone of width dx, flown at heading t.
-    const verticalShift = (wind, v, t, dx) => dx * (v * Math.sin(t) + wind.cy) / (v * Math.cos(t) + wind.cx);
-
-    /* ---------- Geometry ---------- */
-
-    const { zoneWidthKm, halfHeightKm, viewWidthPx, margin, tickStepKm, windArrowPxPerKmh } = SCENE;
-    const zoneCount = WINDS.length;
-
-    // The drone travels from left to right. Legs: still air, zone 1 ... zone n, still air.
-    const still = { cx: 0, cy: 0 };
-    const legs = [
-        { wind: still, dx: STILL_AIR.entryKm },
-        ...WINDS.map(toWindVector).map(wind => ({ wind, dx: zoneWidthKm })),
-        { wind: still, dx: STILL_AIR.exitKm },
-    ];
-
-    // Abscissas (km) of the leg boundaries, from the start (left of the first zone) to the end (right of the last zone).
-    const xs = [-STILL_AIR.entryKm];
-    legs.forEach(leg => {
-        xs.push(xs[xs.length - 1] + leg.dx);
-    });
-
-    // Scene scale: the horizontal extent covers the zones, the still-air regions and their padding.
-    const leftKm = STILL_AIR.entryKm + STILL_AIR.sidePaddingKm, rightKm = STILL_AIR.exitKm + STILL_AIR.sidePaddingKm;
-    const plotWidth = viewWidthPx - margin.left - margin.right;
-    const pxPerKm = plotWidth / (leftKm + zoneCount * zoneWidthKm + rightKm);
-    const plotHeight = 2 * halfHeightKm * pxPerKm;
-    const zoneWidthPx = zoneWidthKm * pxPerKm;
-    const viewHeight = margin.top + plotHeight + margin.bottom;
-    const originY = margin.top + plotHeight / 2;              // pixel ordinate of y = 0
-
-    const toX = km => margin.left + (km + leftKm) * pxPerKm;
-    const toY = km => originY - km * pxPerKm;                 // the y axis points up, the SVG one points down
-
-    /* ---------- Propagation ---------- */
-
-    /* Waypoint ordinates and heading of each leg, derived from the invariant lambda.
-       ok is false if a leg cannot be flown, or if the path leaves the frontiers. */
-    function propagate(v, lambda) {
-        const ys = [0], headings = [];
-        let ok = true;
-
-        for (const leg of legs) {
-            const t = headingFromLambda(leg.wind, v, lambda);
-
-            if (t === null) {
-                ok = false;
-                break;
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>A Drone That Follows Light</title>
+        <style>
+            /* ---------- Theme ---------- */
+            :root {
+                --paper: #eaf0f5; --panel: #f8fafc; --ink: #12203a; --muted: #5a6a80;
+                --line: #c9d5e0; --grid: #d9e2ea; --wind: #0d8a8c; --accessible: #6cc487;
+                --path: #14612f; --heading: #3549d1; --bad: #b3261e;
+                --scene-max-height: 500px;   /* maximum height of the scene on the page */
             }
 
-            headings.push(t);
-            ys.push(ys[ys.length - 1] + verticalShift(leg.wind, v, t, leg.dx));
-        }
+            /* ---------- Page layout ---------- */
+            * { box-sizing: border-box; }
+            html, body { margin: 0; background: var(--paper); color: var(--ink); }
+            body {
+                font: 15px/1.55 "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+                font-variant-numeric: tabular-nums;
+            }
+            .wrap { max-width: 1180px; margin: 0 auto; padding: 26px 16px 44px; }
+            h1 {
+                font-size: clamp(26px, 4.2vw, 40px); line-height: 1.08; letter-spacing: -.025em;
+                font-weight: 680; margin: 0 0 20px; max-width: 24ch;
+            }
+            .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
 
-        if (ys.some(y => Math.abs(y) > halfHeightKm)) {
-            ok = false;
-        }
+            /* Layout: controls on the left, scene and legend on the right */
+            .layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); }
+            .scene-area { min-width: 0; }
+            .controls { display: flex; flex-direction: column; border-right: 1px solid var(--line); }
 
-        return { ys, headings, ok };
-    }
+            @media (max-width: 900px) {   /* narrow screens: controls below the scene */
+                .layout { grid-template-columns: 1fr; }
+                .controls { order: 2; border-right: 0; border-top: 1px solid var(--line); }
+            }
 
-    /* ---------- Drawing ---------- */
+            /* ---------- Controls ---------- */
+            .control { padding: 14px 18px 12px; }
+            .control label { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+            .control output { font-weight: 500; color: var(--path); }
+            input[type=range] { width: 100%; accent-color: var(--path); height: 28px; margin: 0; }
+            input:focus-visible { outline: 2px solid var(--path); outline-offset: 2px; }
 
-    // Horizontal grid lines, plot border and the frontiers between zones.
-    function drawGrid() {
-        let markup = '';
+            /* ---------- Legend ---------- */
+            .legend { display: flex; flex-wrap: wrap; gap: 6px 20px; padding: 9px 14px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }
+            .legend i { display: inline-block; vertical-align: middle; margin-right: 7px; }
+            .sw-wind { width: 22px; border-top: 3.5px solid var(--wind); }
+            .sw-heading { width: 22px; border-top: 3px solid var(--heading); }
+            .sw-accessible { width: 16px; height: 12px; background: color-mix(in srgb, var(--accessible) 35%, transparent); border: 1px solid var(--accessible); }
+            .sw-path { width: 22px; border-top: 3.4px solid var(--path); }
 
-        for (let y = -halfHeightKm; y <= halfHeightKm; y += tickStepKm) {
-            markup += `<line class="${y === 0 ? 'axis0' : 'grid'}" x1="${margin.left}" x2="${margin.left + plotWidth}" y1="${coord(toY(y))}" y2="${coord(toY(y))}"/>`
-                + `<text class="tick" x="${margin.left - 8}" y="${coord(toY(y) + 4)}" text-anchor="end">${y > 0 ? '+' : y < 0 ? '−' : ''}${Math.abs(y)}</text>`;
-        }
+            /* ---------- Scene (SVG) ---------- */
+            .scene-scroll { overflow-x: auto; }   /* narrow screens: scroll instead of squeezing the scene */
+            #scene { display: block; width: 100%; min-width: 680px; height: auto; max-height: var(--scene-max-height); }
 
-        markup += `<text class="tick" x="${margin.left - 8}" y="${margin.top - 8}" text-anchor="end">km</text>`
-            + `<rect class="plot-border" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"/>`;
+            svg text { font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, sans-serif; fill: var(--ink); }
+            .zone-title { font-size: 13px; font-weight: 650; text-anchor: middle; }
+            .zone-sub { font-size: 12px; text-anchor: middle; fill: var(--muted); }
+            .tick { font-size: 11.5px; fill: var(--muted); }
+            .label { font-size: 12.5px; font-weight: 600; }
+            .halo { paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; }   /* keeps text readable over lines */
+            .banner { font-size: 14.5px; font-weight: 650; text-anchor: middle; fill: var(--bad); }
 
-        for (let k = 0; k <= zoneCount; k++) {
-            markup += `<line class="frontier" x1="${coord(toX(k * zoneWidthKm))}" x2="${coord(toX(k * zoneWidthKm))}" y1="${margin.top}" y2="${margin.top + plotHeight}"/>`;
-        }
+            .grid { stroke: var(--grid); stroke-width: 1; }
+            .axis0 { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 5; }
+            .plot-border { fill: none; stroke: var(--ink); stroke-width: 1.5; }
+            .frontier { stroke: var(--ink); stroke-width: 1.5; }
+            .accessible { fill: var(--accessible); fill-opacity: .3; stroke: var(--accessible); stroke-opacity: .7; stroke-width: 1.3; }
+            .wind-arrow { stroke: var(--wind); fill: var(--wind); stroke-width: 3.5; }
+            .heading-arrow { stroke: var(--heading); fill: var(--heading); stroke-width: 3; }
 
-        return markup;
-    }
+            .path .leg { stroke: var(--path); stroke-width: 3.4; stroke-linecap: round; }
+            .waypoint { fill: var(--panel); stroke: var(--ink); stroke-width: 2; }
+            .start-point { fill: var(--ink); stroke: var(--ink); stroke-width: 2; }
+            .endpoint { fill: var(--path); stroke: var(--panel); stroke-width: 2; }
 
-    // Wind arrow and labels of every zone.
-    function drawZones(airspeed) {
-        let markup = '';
-        const arrowY = margin.top + 60;
+            /* ---------- Footer ---------- */
+            .site-footer { background: var(--ink); color: var(--paper); font-size: 13px; }
+            .site-footer-inner { max-width: 1180px; margin: 0 auto; padding: 14px 16px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 28px; }
+            .site-footer a { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, var(--paper) 45%, transparent); }
+            .site-footer a:hover { text-decoration-color: currentColor; }
+            .site-footer a:focus-visible { outline: 2px solid var(--paper); outline-offset: 3px; }
+        </style>
+    </head>
+    <body>
+        <div class="wrap">
+            <header><h1>A Drone That Follows Light</h1></header>
 
-        WINDS.forEach((wind, k) => {
-            const centerX = toX(k * zoneWidthKm) + zoneWidthPx / 2;
-            const half = Math.min(wind.speedKmh * windArrowPxPerKmh, zoneWidthPx * 0.4);   // the arrow stays inside its zone
-            const ux = Math.cos(rad(wind.dirDeg)), uy = -Math.sin(rad(wind.dirDeg));       // unit vector in pixels (y flipped)
+            <section class="panel layout" aria-label="Simulation">
+                <div class="controls" aria-label="Controls">
+                    <div class="control">
+                        <label for="speed"><span>Drone airspeed</span><output id="speedOut"></output></label>
+                        <input id="speed" type="range">
+                    </div>
+                </div>
+                <div class="scene-area">
+                    <div class="scene-scroll"><svg id="scene" role="img" aria-label="A drone crossing zones of wind from left to right"></svg></div>
+                    <div class="legend">
+                        <span><i class="sw-wind"></i>wind in the zone</span>
+                        <span><i class="sw-heading"></i>heading (relative to the air)</span>
+                        <span><i class="sw-accessible"></i>reachable region</span>
+                        <span><i class="sw-path"></i>path of the drone</span>
+                    </div>
+                </div>
+            </section>
+        </div>
 
-            markup += arrow(centerX - ux * half, arrowY - uy * half, centerX + ux * half, arrowY + uy * half, 'wind-arrow', 12)
-                + `<text class="zone-title" x="${coord(centerX)}" y="24">Zone ${k + 1}</text>`
-                + `<text class="zone-sub" x="${coord(centerX)}" y="40">wind ${wind.speedKmh} km/h, c/v = ${(wind.speedKmh / airspeed).toFixed(2)}</text>`;
-        });
+        <footer class="site-footer">
+            <div class="site-footer-inner">
+                <a href="https://github.com/michaelsoulignac/snell-path-planning" target="_blank" rel="noopener">Code on GitHub</a>
+                <a href="https://michaelsoulignac.github.io/snell-path-planning" target="_blank" rel="noopener">Mathematical derivation</a>
+            </div>
+        </footer>
 
-        return markup;
-    }
+        <script>
+            /* ---------- Configuration (distances in km, speeds in km/h, angles in degrees) ---------- */
 
-    // Ground track through the waypoints (xs[i], ys[i]).
-    function drawPath(ys) {
-        const legLines = ys.slice(1).map((y, k) =>
-            `<line class="leg" x1="${coord(toX(xs[k]))}" y1="${coord(toY(ys[k]))}" x2="${coord(toX(xs[k + 1]))}" y2="${coord(toY(y))}"/>`);
+            /* Wind of each zone, from left to right on screen.
+               dirDeg is measured from the horizontal, counterclockwise (0 = east, 90 = north). */
+            const WINDS = [
+                { speedKmh: 50, dirDeg: 60 },
+                { speedKmh: 75, dirDeg: 15 },
+                { speedKmh: 70, dirDeg: -30 },
+                { speedKmh: 55, dirDeg: -75 },
+            ];
 
-        return `<g class="path">${legLines.join('')}</g>`;
-    }
+            const AIRSPEED = { minKmh: 20, maxKmh: 200, stepKmh: 1, defaultKmh: 50 };   // range of the airspeed slider
+            const LAMBDA = 0;                                                           // Snell-like invariant, shared by all zones
 
-    const drawWaypoint = (x, y, className = 'waypoint', radius = 5) =>
-        `<circle class="${className}" cx="${coord(toX(x))}" cy="${coord(toY(y))}" r="${radius}"/>`;
+            const SCENE = {
+                zoneWidthKm: 10,
+                halfHeightKm: 10,         // half-height of every frontier
+                viewWidthPx: 960,         // the scale (pixels per km) follows from this width and the horizontal extent
+                headingArrowPx: 46,
+                margin: { left: 60, right: 60, top: 46, bottom: 34 },
+                tickStepKm: 5,
+                windArrowPxPerKmh: 0.55,  // half-length of the wind arrow per km/h of wind (capped so that it fits in the zone)
+            };
 
-    function render(airspeed) {
-        const { ys, headings, ok } = propagate(airspeed, LAMBDA);
-        const startX = toX(xs[0]), startY = toY(ys[0]);
+            // Still-air regions before the first zone and after the last one.
+            const STILL_AIR = { entryKm: 4, exitKm: 3, sidePaddingKm: 1 };
 
-        let markup = `<defs><clipPath id="plot"><rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"/></clipPath></defs>`
-            + drawZones(airspeed) + drawGrid();
+            /* ---------- Helpers ---------- */
 
-        markup += `<g clip-path="url(#plot)">${drawPath(ys)}</g>`;
+            const rad = degrees => (degrees * Math.PI) / 180;
+            const coord = x => x.toFixed(1);   // SVG coordinates: one decimal is enough
 
-        // Heading in the first leg (the pixel y axis points down).
-        if (headings.length > 0) {
-            const t = headings[0], len = SCENE.headingArrowPx;
-            markup += arrow(startX, startY, startX + len * Math.cos(t), startY - len * Math.sin(t), 'heading-arrow', 11);
-        }
+            // Arrow from (x1, y1) to (x2, y2), in pixels.
+            function arrow(x1, y1, x2, y2, className, headSize = 10) {
+                const dx = x2 - x1, dy = y2 - y1, length = Math.hypot(dx, dy);
 
-        for (let k = 1; k < ys.length - 1; k++) {
-            markup += drawWaypoint(xs[k], ys[k]);
-        }
+                if (length < 2) {
+                    return '';
+                }
 
-        if (ys.length === xs.length) {
-            markup += drawWaypoint(xs[xs.length - 1], ys[ys.length - 1], 'endpoint', 6);
-        }
+                const ux = dx / length, uy = dy / length, h = Math.min(headSize, length * 0.6);
+                const bx = x2 - ux * h, by = y2 - uy * h, px = -uy * h * 0.5, py = ux * h * 0.5;   // base of the arrowhead and its half-width offset
 
-        markup += drawWaypoint(xs[0], ys[0], 'start-point', 6)
-            + `<text class="label halo" x="${coord(startX)}" y="${coord(startY + 26)}" text-anchor="middle">start</text>`;
+                return `<line x1="${coord(x1)}" y1="${coord(y1)}" x2="${coord(bx)}" y2="${coord(by)}" class="${className}"/>`
+                    + `<polygon points="${coord(x2)},${coord(y2)} ${coord(bx + px)},${coord(by + py)} ${coord(bx - px)},${coord(by - py)}" class="${className}"/>`;
+            }
 
-        if (!ok) {
-            markup += `<text class="banner halo" x="${margin.left + plotWidth / 2}" y="${margin.top + plotHeight - 16}">No path: at this speed, the wind pushes the drone beyond the frontiers.</text>`;
-        }
+            // Filled sector from an apex (pixels), between two directions (radians, y pointing up), clipped by clipId.
+            function sectorPolygon({ apexX, apexY, lo, hi, className, clipId, radius = 900 }) {
+                const steps = Math.max(2, Math.ceil((hi - lo) / (Math.PI / 12)));   // one vertex every 15 degrees at most
+                let points = `${coord(apexX)},${coord(apexY)}`;
 
-        const scene = document.getElementById('scene');
-        scene.setAttribute('viewBox', `0 0 ${viewWidthPx} ${coord(viewHeight)}`);
-        scene.innerHTML = markup;
-    }
+                for (let i = 0; i <= steps; i++) {
+                    const angle = lo + (hi - lo) * i / steps;
+                    points += ` ${coord(apexX + radius * Math.cos(angle))},${coord(apexY - radius * Math.sin(angle))}`;
+                }
 
-    /* ---------- Controls ---------- */
+                return `<polygon class="${className}" clip-path="url(#${clipId})" points="${points}"/>`;
+            }
 
-    // Configures the airspeed slider and calls onChange(airspeed in km/h) whenever it moves.
-    function setupSpeedSlider(input, output, onChange) {
-        input.min = AIRSPEED.minKmh;   // bounds first, so the value is not clamped by old bounds
-        input.max = AIRSPEED.maxKmh;
-        input.step = AIRSPEED.stepKmh;
-        input.value = AIRSPEED.defaultKmh;
+            /* ---------- Physics (pure computation) ----------
+               Conventions: x = east (direction of travel), y = north, headings in radians.
+               Heading e = (cos t, sin t), ground velocity g = v e + c, w = v + c.e
+               Along the path, lambda = sin(t) / w is the same in every zone (Snell-like invariant). */
 
-        const showValue = () => {
-            output.textContent = `${input.value} km/h`;
-        };
+            const toWindVector = ({ speedKmh, dirDeg }) => ({ cx: speedKmh * Math.cos(rad(dirDeg)), cy: speedKmh * Math.sin(rad(dirDeg)) });
 
-        input.addEventListener('input', () => {
-            showValue();
-            onChange(Number(input.value));
-        });
+            /* Heading in a zone of wind c for a given lambda: sin(t - phi) = lambda v / R.
+               Only the arcsine branch can be admissible. Returns null if no admissible heading exists
+               (no solution, or the drone cannot move forward: gx <= 0 or w <= 0). */
+            function headingFromLambda(wind, v, lambda) {
+                const A = 1 - lambda * wind.cy, B = lambda * wind.cx, R = Math.hypot(A, B), phi = Math.atan2(B, A);
+                const s = lambda * v / R;
 
-        showValue();
-    }
+                if (Math.abs(s) >= 1) {
+                    return null;
+                }
 
-    setupSpeedSlider(document.getElementById('speed'), document.getElementById('speedOut'), render);
-    render(AIRSPEED.defaultKmh);
-</script>
-</body>
+                const t = phi + Math.asin(s);
+                const gx = v * Math.cos(t) + wind.cx, w = v + wind.cx * Math.cos(t) + wind.cy * Math.sin(t);
+
+                return gx > 0 && w > 0 ? t : null;
+            }
+
+            // Vertical shift across a zone of width dx, flown at heading t.
+            const verticalShift = (wind, v, t, dx) => dx * (v * Math.sin(t) + wind.cy) / (v * Math.cos(t) + wind.cx);
+
+            /* Accessibility sector: directions of the ground track reachable from a point, around the wind direction alpha.
+               c < v: the whole plane (half-angle pi, i.e. 360 degrees).
+               c = v: the half-plane delimited by the line normal to the wind (half-angle pi / 2).
+               c > v: a sector of half-angle asin(v / c), which tends to pi / 2 when c tends to v. */
+            function accessibilitySector(wind, v) {
+                const c = Math.hypot(wind.cx, wind.cy), alpha = Math.atan2(wind.cy, wind.cx);
+                const half = c < v ? Math.PI : Math.asin(v / c);
+
+                return { lo: alpha - half, hi: alpha + half };
+            }
+
+            /* ---------- Geometry ---------- */
+
+            const { zoneWidthKm, halfHeightKm, viewWidthPx, margin, tickStepKm, windArrowPxPerKmh } = SCENE;
+            const zoneCount = WINDS.length;
+            const windVectors = WINDS.map(toWindVector);
+
+            // The drone travels from left to right. Legs: still air, zone 1 ... zone n, still air.
+            const still = { cx: 0, cy: 0 };
+            const legs = [
+                { wind: still, dx: STILL_AIR.entryKm },
+                ...windVectors.map(wind => ({ wind, dx: zoneWidthKm })),
+                { wind: still, dx: STILL_AIR.exitKm },
+            ];
+
+            // Abscissas (km) of the leg boundaries, from the start (left of the first zone) to the end (right of the last zone).
+            const xs = [-STILL_AIR.entryKm];
+            legs.forEach(leg => {
+                xs.push(xs[xs.length - 1] + leg.dx);
+            });
+
+            // Scene scale: the horizontal extent covers the zones, the still-air regions and their padding.
+            const leftKm = STILL_AIR.entryKm + STILL_AIR.sidePaddingKm, rightKm = STILL_AIR.exitKm + STILL_AIR.sidePaddingKm;
+            const plotWidth = viewWidthPx - margin.left - margin.right;
+            const pxPerKm = plotWidth / (leftKm + zoneCount * zoneWidthKm + rightKm);
+            const plotHeight = 2 * halfHeightKm * pxPerKm;
+            const zoneWidthPx = zoneWidthKm * pxPerKm;
+            const viewHeight = margin.top + plotHeight + margin.bottom;
+            const originY = margin.top + plotHeight / 2;              // pixel ordinate of y = 0
+
+            const toX = km => margin.left + (km + leftKm) * pxPerKm;
+            const toY = km => originY - km * pxPerKm;                 // the y axis points up, the SVG one points down
+
+            /* ---------- Propagation ---------- */
+
+            /* Waypoint ordinates and heading of each leg, derived from the invariant lambda.
+               ok is false if a leg cannot be flown, or if the path leaves the frontiers. */
+            function propagate(v, lambda) {
+                const ys = [0], headings = [];
+                let ok = true;
+
+                for (const leg of legs) {
+                    const t = headingFromLambda(leg.wind, v, lambda);
+
+                    if (t === null) {
+                        ok = false;
+                        break;
+                    }
+
+                    headings.push(t);
+                    ys.push(ys[ys.length - 1] + verticalShift(leg.wind, v, t, leg.dx));
+                }
+
+                if (ys.some(y => Math.abs(y) > halfHeightKm)) {
+                    ok = false;
+                }
+
+                return { ys, headings, ok };
+            }
+
+            /* ---------- Drawing ---------- */
+
+            // Clip paths: the whole plot, and one per leg (to cut the accessibility sectors at the frontiers).
+            function drawDefs() {
+                let markup = `<defs><clipPath id="plot"><rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"/></clipPath>`;
+
+                for (let k = 0; k < legs.length; k++) {
+                    // The first and last legs extend to the border of the plot: in still air, the drone can also go backwards.
+                    const left = k === 0 ? margin.left : toX(xs[k]);
+                    const right = k === legs.length - 1 ? margin.left + plotWidth : toX(xs[k + 1]);
+
+                    markup += `<clipPath id="leg-${k}"><rect x="${coord(left)}" y="${margin.top}" width="${coord(right - left)}" height="${plotHeight}"/></clipPath>`;
+                }
+
+                return markup + '</defs>';
+            }
+
+            // Horizontal grid lines, plot border and the frontiers between zones.
+            function drawGrid() {
+                let markup = '';
+
+                for (let y = -halfHeightKm; y <= halfHeightKm; y += tickStepKm) {
+                    markup += `<line class="${y === 0 ? 'axis0' : 'grid'}" x1="${margin.left}" x2="${margin.left + plotWidth}" y1="${coord(toY(y))}" y2="${coord(toY(y))}"/>`
+                        + `<text class="tick" x="${margin.left - 8}" y="${coord(toY(y) + 4)}" text-anchor="end">${y > 0 ? '+' : y < 0 ? '−' : ''}${Math.abs(y)}</text>`;
+                }
+
+                markup += `<text class="tick" x="${margin.left - 8}" y="${margin.top - 8}" text-anchor="end">km</text>`
+                    + `<rect class="plot-border" x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"/>`;
+
+                for (let k = 0; k <= zoneCount; k++) {
+                    markup += `<line class="frontier" x1="${coord(toX(k * zoneWidthKm))}" x2="${coord(toX(k * zoneWidthKm))}" y1="${margin.top}" y2="${margin.top + plotHeight}"/>`;
+                }
+
+                return markup;
+            }
+
+            // Accessibility sector of every leg (still-air regions included), starting from the waypoint where the path enters it.
+            function drawAccessibilitySectors(ys, airspeed) {
+                let markup = '';
+
+                for (let k = 0; k < legs.length; k++) {
+                    if (k >= ys.length) {
+                        break;   // the path stops before this leg
+                    }
+
+                    const sector = accessibilitySector(legs[k].wind, airspeed);
+
+                    markup += sectorPolygon({
+                        apexX: toX(xs[k]), apexY: toY(ys[k]),
+                        lo: sector.lo, hi: sector.hi,
+                        className: 'accessible', clipId: `leg-${k}`,
+                    });
+                }
+
+                return markup;
+            }
+
+            // Wind arrow and labels of every zone.
+            function drawZones(airspeed) {
+                let markup = '';
+                const arrowY = margin.top + 60;
+
+                WINDS.forEach((wind, k) => {
+                    const centerX = toX(k * zoneWidthKm) + zoneWidthPx / 2;
+                    const half = Math.min(wind.speedKmh * windArrowPxPerKmh, zoneWidthPx * 0.4);   // the arrow stays inside its zone
+                    const ux = Math.cos(rad(wind.dirDeg)), uy = -Math.sin(rad(wind.dirDeg));       // unit vector in pixels (y flipped)
+
+                    markup += arrow(centerX - ux * half, arrowY - uy * half, centerX + ux * half, arrowY + uy * half, 'wind-arrow', 12)
+                        + `<text class="zone-title" x="${coord(centerX)}" y="24">Zone ${k + 1}</text>`
+                        + `<text class="zone-sub" x="${coord(centerX)}" y="40">wind ${wind.speedKmh} km/h, c/v = ${(wind.speedKmh / airspeed).toFixed(2)}</text>`;
+                });
+
+                return markup;
+            }
+
+            // Ground track through the waypoints (xs[i], ys[i]).
+            function drawPath(ys) {
+                const legLines = ys.slice(1).map((y, k) =>
+                    `<line class="leg" x1="${coord(toX(xs[k]))}" y1="${coord(toY(ys[k]))}" x2="${coord(toX(xs[k + 1]))}" y2="${coord(toY(y))}"/>`);
+
+                return `<g class="path">${legLines.join('')}</g>`;
+            }
+
+            const drawWaypoint = (x, y, className = 'waypoint', radius = 5) =>
+                `<circle class="${className}" cx="${coord(toX(x))}" cy="${coord(toY(y))}" r="${radius}"/>`;
+
+            function render(airspeed) {
+                const { ys, headings, ok } = propagate(airspeed, LAMBDA);
+                const startX = toX(xs[0]), startY = toY(ys[0]);
+
+                let markup = drawDefs() + drawAccessibilitySectors(ys, airspeed) + drawZones(airspeed) + drawGrid();
+
+                markup += `<g clip-path="url(#plot)">${drawPath(ys)}</g>`;
+
+                // Heading in the first leg (the pixel y axis points down).
+                if (headings.length > 0) {
+                    const t = headings[0], len = SCENE.headingArrowPx;
+                    markup += arrow(startX, startY, startX + len * Math.cos(t), startY - len * Math.sin(t), 'heading-arrow', 11);
+                }
+
+                for (let k = 1; k < ys.length - 1; k++) {
+                    markup += drawWaypoint(xs[k], ys[k]);
+                }
+
+                if (ys.length === xs.length) {
+                    markup += drawWaypoint(xs[xs.length - 1], ys[ys.length - 1], 'endpoint', 6);
+                }
+
+                markup += drawWaypoint(xs[0], ys[0], 'start-point', 6)
+                    + `<text class="label halo" x="${coord(startX)}" y="${coord(startY + 26)}" text-anchor="middle">start</text>`;
+
+                if (!ok) {
+                    markup += `<text class="banner halo" x="${margin.left + plotWidth / 2}" y="${margin.top + plotHeight - 16}">No path: at this speed, the wind pushes the drone beyond the frontiers.</text>`;
+                }
+
+                const scene = document.getElementById('scene');
+                scene.setAttribute('viewBox', `0 0 ${viewWidthPx} ${coord(viewHeight)}`);
+                scene.innerHTML = markup;
+            }
+
+            /* ---------- Controls ---------- */
+
+            // Configures the airspeed slider and calls onChange(airspeed in km/h) whenever it moves.
+            function setupSpeedSlider(input, output, onChange) {
+                input.min = AIRSPEED.minKmh;   // bounds first, so the value is not clamped by old bounds
+                input.max = AIRSPEED.maxKmh;
+                input.step = AIRSPEED.stepKmh;
+                input.value = AIRSPEED.defaultKmh;
+
+                const showValue = () => {
+                    output.textContent = `${input.value} km/h`;
+                };
+
+                input.addEventListener('input', () => {
+                    showValue();
+                    onChange(Number(input.value));
+                });
+
+                showValue();
+            }
+
+            setupSpeedSlider(document.getElementById('speed'), document.getElementById('speedOut'), render);
+            render(AIRSPEED.defaultKmh);
+        </script>
+    </body>
 </html>
