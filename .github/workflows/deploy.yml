@@ -26,7 +26,7 @@ jobs:
 
       - run: mkdocs build --site-dir _site/math
 
-      - run: cp index.html _site/index.html
+      - run: cp -r index.html css js _site/
 
       - uses: actions/upload-pages-artifact@v4
         with:
