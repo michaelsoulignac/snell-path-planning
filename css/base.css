@@ -1,10 +1,10 @@
-/* Base CSS: Shared theme, page layout, controls, legend and footer. */
+/* Shared theme, page layout, controls, legend and footer. */
 
 /* ---------- Theme ---------- */
 :root {
     --paper: #eaf0f5; --panel: #f8fafc; --ink: #12203a; --muted: #5a6a80;
     --line: #c9d5e0; --grid: #d9e2ea; --wind: #0d8a8c; --accessible: #6cc487;
-    --path: #14612f; --heading: #3549d1; --bad: #b3261e;
+    --path: #14612f; --heading: #2fae5a; --bad: #b3261e;
 }
 
 /* ---------- Page layout ---------- */

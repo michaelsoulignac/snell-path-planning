@@ -2,7 +2,8 @@
 
 import { SCENE, STILL_AIR, WINDS } from './globals.js';
 import { rad, coord } from './util.js';
-import { accessibilitySector, legs, xs } from './drone.js';
+import { accessibilitySector } from './drone.js';
+import { legs, xs } from './drone.js';
 
 
 /* ---------- Low-level SVG tags builders ---------- */
@@ -146,10 +147,11 @@ export function drawScene(sceneElement, { ys, headings, ok }, airspeed) {
 
     markup += `<g clip-path="url(#plot)">${drawPath(ys)}</g>`;
 
-    // Heading in the first leg (the pixel y axis points down).
-    if (headings.length > 0) {
-        const t = headings[0], len = SCENE.headingArrowPx;
-        markup += arrow(startX, startY, startX + len * Math.cos(t), startY - len * Math.sin(t), 'heading-arrow', 11);
+    // Heading of each leg, drawn from the waypoint where the leg starts (the pixel y axis points down).
+    for (let k = 0; k < headings.length; k++) {
+        const x = toX(xs[k]), y = toY(ys[k]), t = headings[k], len = SCENE.headingArrowPx;
+
+        markup += arrow(x, y, x + len * Math.cos(t), y - len * Math.sin(t), 'heading-arrow', 11);
     }
 
     for (let k = 1; k < ys.length - 1; k++) {
