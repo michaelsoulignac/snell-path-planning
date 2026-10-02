@@ -11,7 +11,6 @@ export const WINDS = [
 ];
 
 export const AIRSPEED = { minKmh: 20, maxKmh: 200, stepKmh: 1, defaultKmh: 50 };   // range of the airspeed slider
-export const LAMBDA = 0;                                                           // Snell-like invariant, shared by all zones
 
 export const SCENE = {
     zoneWidthKm: 10,
@@ -23,5 +22,11 @@ export const SCENE = {
     windArrowPxPerKmh: 0.55,  // half-length of the wind arrow per km/h of wind (capped so that it fits in the zone)
 };
 
-// Still-air regions before the first zone and after the last one.
-export const STILL_AIR = { entryKm: 4, exitKm: 3, sidePaddingKm: 1 };
+// Target and initial heading
+export const TARGET = {
+    radiusPx: 10,             // size of the target, also the tolerance for "target reached"
+    rangeKm: 9,               // the target ordinate slider goes from -range to +range
+    defaultKm: 4,
+    headingStepDeg: 0.1,
+    visibleMarginKm: 0.5,     // initial headings are limited to arrivals this far inside the frame
+};

@@ -1,9 +1,8 @@
 // Rendering of the main scene (SVG)
 
-import { SCENE, STILL_AIR, WINDS } from './globals.js';
-import { rad, coord } from './util.js';
-import { accessibilitySector } from './drone.js';
-import { legs, xs } from './drone.js';
+import { SCENE, TARGET, WINDS } from './globals.js';
+import { rad, coord, formatNumber } from './util.js';
+import { accessibilitySector, legs, xs } from './drone.js';
 
 
 /* ---------- Low-level SVG tags builders ---------- */
@@ -42,30 +41,25 @@ export function sectorPolygon({ apexX, apexY, lo, hi, className, clipId, radius 
 const { zoneWidthKm, halfHeightKm, viewWidthPx, margin, tickStepKm, windArrowPxPerKmh } = SCENE;
 const zoneCount = WINDS.length;
 
-// Scene scale: the horizontal extent covers the zones, the still-air regions and their padding.
-const leftKm = STILL_AIR.entryKm + STILL_AIR.sidePaddingKm, rightKm = STILL_AIR.exitKm + STILL_AIR.sidePaddingKm;
+// Scene scale: the horizontal extent is the wind zones, side by side.
 const plotWidth = viewWidthPx - margin.left - margin.right;
-const pxPerKm = plotWidth / (leftKm + zoneCount * zoneWidthKm + rightKm);
+export const pxPerKm = plotWidth / (zoneCount * zoneWidthKm);
 const plotHeight = 2 * halfHeightKm * pxPerKm;
 const zoneWidthPx = zoneWidthKm * pxPerKm;
 const viewHeight = margin.top + plotHeight + margin.bottom;
 const originY = margin.top + plotHeight / 2;              // pixel ordinate of y = 0
 
-const toX = km => margin.left + (km + leftKm) * pxPerKm;
+const toX = km => margin.left + km * pxPerKm;
 const toY = km => originY - km * pxPerKm;                 // the y axis points up, the SVG one points down
 
 /* ---------- Drawing ---------- */
 
-// Clip paths: the whole plot, and one per leg (to cut the accessibility sectors at the frontiers).
+// Clip paths: the whole plot, and one per zone (to cut the accessibility sectors at the frontiers).
 function drawDefs() {
     let markup = `<defs><clipPath id="plot"><rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}"/></clipPath>`;
 
-    for (let k = 0; k < legs.length; k++) {
-        // The first and last legs extend to the border of the plot: in still air, the drone can also go backwards.
-        const left = k === 0 ? margin.left : toX(xs[k]);
-        const right = k === legs.length - 1 ? margin.left + plotWidth : toX(xs[k + 1]);
-
-        markup += `<clipPath id="leg-${k}"><rect x="${coord(left)}" y="${margin.top}" width="${coord(right - left)}" height="${plotHeight}"/></clipPath>`;
+    for (let k = 0; k < zoneCount; k++) {
+        markup += `<clipPath id="zone-${k}"><rect x="${coord(toX(k * zoneWidthKm))}" y="${margin.top}" width="${coord(zoneWidthPx)}" height="${plotHeight}"/></clipPath>`;
     }
 
     return markup + '</defs>';
@@ -90,13 +84,13 @@ function drawGrid() {
     return markup;
 }
 
-// Accessibility sector of every leg (still-air regions included), starting from the waypoint where the path enters it.
+// Accessibility sector of every zone, starting from the waypoint where the path enters it (the start, for the first zone).
 function drawAccessibilitySectors(ys, airspeed) {
     let markup = '';
 
     for (let k = 0; k < legs.length; k++) {
         if (k >= ys.length) {
-            break;   // the path stops before this leg
+            break;   // the path stops before this zone
         }
 
         const sector = accessibilitySector(legs[k].wind, airspeed);
@@ -104,7 +98,7 @@ function drawAccessibilitySectors(ys, airspeed) {
         markup += sectorPolygon({
             apexX: toX(xs[k]), apexY: toY(ys[k]),
             lo: sector.lo, hi: sector.hi,
-            className: 'accessible', clipId: `leg-${k}`,
+            className: 'accessible', clipId: `zone-${k}`,
         });
     }
 
@@ -140,7 +134,26 @@ function drawPath(ys) {
 const drawWaypoint = (x, y, className = 'waypoint', radius = 5) =>
     `<circle class="${className}" cx="${coord(toX(x))}" cy="${coord(toY(y))}" r="${radius}"/>`;
 
-export function drawScene(sceneElement, { ys, headings, ok }, airspeed) {
+// Message at the bottom of the scene: [kind, text], where kind is '' | 'ok' | 'bad'.
+function bannerFor({ ok, hit, reachable, miss }) {
+    if (!ok) {
+        return ['bad', 'No path: the wind pushes the drone beyond the frontiers.'];
+    }
+
+    if (hit) {
+        return ['ok', 'Target reached'];
+    }
+
+    if (!reachable) {
+        return ['bad', 'Target out of reach at this airspeed'];
+    }
+
+    return ['', `Missed by ${formatNumber(Math.abs(miss), 1)} km, too ${miss > 0 ? 'high' : 'low'}`];
+}
+
+export function drawScene(sceneElement, shot, { airspeed, targetY }) {
+    const { ys, headings, hit } = shot;
+    const end = xs.length - 1;
     const startX = toX(xs[0]), startY = toY(ys[0]);
 
     let markup = drawDefs() + drawAccessibilitySectors(ys, airspeed) + drawZones(airspeed) + drawGrid();
@@ -154,20 +167,27 @@ export function drawScene(sceneElement, { ys, headings, ok }, airspeed) {
         markup += arrow(x, y, x + len * Math.cos(t), y - len * Math.sin(t), 'heading-arrow', 11);
     }
 
-    for (let k = 1; k < ys.length - 1; k++) {
+    for (let k = 1; k < end && k < ys.length; k++) {
         markup += drawWaypoint(xs[k], ys[k]);
     }
 
     if (ys.length === xs.length) {
-        markup += drawWaypoint(xs[xs.length - 1], ys[ys.length - 1], 'endpoint', 6);
+        markup += drawWaypoint(xs[end], ys[end], 'endpoint', 5.5);
     }
 
     markup += drawWaypoint(xs[0], ys[0], 'start-point', 6)
         + `<text class="label halo" x="${coord(startX)}" y="${coord(startY + 26)}" text-anchor="middle">start</text>`;
 
-    if (!ok) {
-        markup += `<text class="banner halo" x="${margin.left + plotWidth / 2}" y="${margin.top + plotHeight - 16}">No path: at this speed, the wind pushes the drone beyond the frontiers.</text>`;
-    }
+    // Target: a dot in a circle, which is filled when the drone reaches it
+    const targetX = toX(xs[end]), targetPy = toY(targetY);
+
+    markup += `<circle class="target${hit ? ' hit' : ''}" cx="${coord(targetX)}" cy="${coord(targetPy)}" r="${TARGET.radiusPx}"/>`
+        + (hit ? '' : `<circle class="target-dot" cx="${coord(targetX)}" cy="${coord(targetPy)}" r="2.5"/>`)
+        + `<text class="label halo" x="${coord(targetX + 16)}" y="${coord(targetPy + 5)}">target</text>`;
+
+    const [kind, text] = bannerFor(shot);
+
+    markup += `<text class="banner halo ${kind}" x="${margin.left + plotWidth / 2}" y="${margin.top + plotHeight - 16}">${text}</text>`;
 
     sceneElement.setAttribute('viewBox', `0 0 ${viewWidthPx} ${coord(viewHeight)}`);
     sceneElement.innerHTML = markup;

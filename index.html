@@ -9,17 +9,34 @@
     </head>
     <body>
         <div class="wrap">
-            <header><h1>A Drone That Follows Light</h1></header>
+            <header>
+                <h1>A Drone That Follows Light</h1>
+                <p class="intro">
+                    A drone flies through successive wind zones and has to reach a target point.
+                    It can be <a href="https://michaelsoulignac.github.io/snell-path-planning/math" target="_blank" rel="noopener">shown mathematically</a>
+                    that, in each wind zone, the drone is deflected like a light ray, following a law analogous to Snell's.
+                    To reach the target, it is therefore enough to adjust the initial heading of the drone, and nothing else.
+                    Try moving the ordinate of the target, then finding the optimal initial heading!
+                </p>
+            </header>
 
             <section class="panel layout" aria-label="Simulation">
                 <div class="controls" aria-label="Controls">
                     <div class="control">
+                        <label for="theta"><span>Initial heading</span><output id="thetaOut"></output></label>
+                        <input id="theta" type="range">
+                    </div>
+                    <div class="control">
                         <label for="speed"><span>Drone airspeed</span><output id="speedOut"></output></label>
                         <input id="speed" type="range">
                     </div>
+                    <div class="control">
+                        <label for="target"><span>Target ordinate</span><output id="targetOut"></output></label>
+                        <input id="target" type="range">
+                    </div>
                 </div>
                 <div class="scene-area">
-                    <div class="scene-scroll"><svg id="scene" role="img" aria-label="A drone crossing zones of wind from left to right"></svg></div>
+                    <div class="scene-scroll"><svg id="scene" role="img" aria-label="A drone flying through four wind zones towards a target"></svg></div>
                     <div class="legend">
                         <span><i class="sw-wind"></i>wind in the zone</span>
                         <span><i class="sw-heading"></i>heading (relative to the air)</span>
@@ -32,8 +49,10 @@
 
         <footer class="site-footer">
             <div class="site-footer-inner">
-                <a href="https://github.com/michaelsoulignac/snell-path-planning" target="_blank" rel="noopener">Code on GitHub</a>
-                <a href="https://michaelsoulignac.github.io/snell-path-planning/math" target="_blank" rel="noopener">Mathematical derivation</a>
+                <p>
+                    © Michaël Soulignac 2026 -
+                    Contribute to this project <a href="https://github.com/michaelsoulignac/snell-path-planning" target="_blank" rel="noopener">on GitHub!</a>
+                </p>
             </div>
         </footer>
 

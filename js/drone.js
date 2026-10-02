@@ -3,12 +3,13 @@
    Heading e = (cos t, sin t), ground velocity g = v e + c, w = v + c.e
    Along the path, lambda = sin(t) / w is the same in every zone (Snell-like invariant). */
 
-import { SCENE, STILL_AIR, WINDS } from './globals.js';
-import { rad } from './util.js';
+import { SCENE, WINDS } from './globals.js';
+import { last, rad } from './util.js';
 
 export const toWindVector = ({ speedKmh, dirDeg }) => ({ cx: speedKmh * Math.cos(rad(dirDeg)), cy: speedKmh * Math.sin(rad(dirDeg)) });
 
 const { zoneWidthKm, halfHeightKm } = SCENE;
+const zoneCount = WINDS.length;
 const windVectors = WINDS.map(toWindVector);
 
 /* Heading in a zone of wind c for a given lambda: sin(t - phi) = lambda v / R.
@@ -28,6 +29,9 @@ export function headingFromLambda(wind, v, lambda) {
     return gx > 0 && w > 0 ? t : null;
 }
 
+// Invariant lambda for a heading t in a zone of wind c.
+const lambdaOf = (wind, v, t) => Math.sin(t) / (v + wind.cx * Math.cos(t) + wind.cy * Math.sin(t));
+
 // Vertical shift across a zone of width dx, flown at heading t.
 export const verticalShift = (wind, v, t, dx) => dx * (v * Math.sin(t) + wind.cy) / (v * Math.cos(t) + wind.cx);
 
@@ -42,19 +46,15 @@ export function accessibilitySector(wind, v) {
     return { lo: alpha - half, hi: alpha + half };
 }
 
-// The drone travels from left to right. Legs: still air, zone 1 ... zone n, still air.
-const still = { cx: 0, cy: 0 };
-export const legs = [
-    { wind: still, dx: STILL_AIR.entryKm },
-    ...windVectors.map(wind => ({ wind, dx: zoneWidthKm })),
-    { wind: still, dx: STILL_AIR.exitKm },
+/* The start and the target are in the middle of the first and last zones.
+   Legs: start, frontier 1 ... frontier n-1, target. Each one is flown in the wind of its zone. */
+export const xs = [
+    zoneWidthKm / 2,
+    ...Array.from({ length: zoneCount - 1 }, (_, k) => (k + 1) * zoneWidthKm),
+    zoneCount * zoneWidthKm - zoneWidthKm / 2,
 ];
 
-// Abscissas (km) of the leg boundaries, from the start (left of the first zone) to the end (right of the last zone).
-export const xs = [-STILL_AIR.entryKm];
-legs.forEach(leg => {
-    xs.push(xs[xs.length - 1] + leg.dx);
-});
+export const legs = windVectors.map((wind, k) => ({ wind, dx: xs[k + 1] - xs[k] }));
 
 /* Waypoint ordinates and heading of each leg, derived from the invariant lambda.
    ok is false if a leg cannot be flown, or if the path leaves the frontiers. */

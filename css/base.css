@@ -17,8 +17,10 @@ body {
 .wrap { max-width: 1180px; margin: 0 auto; padding: 26px 16px 44px; }
 h1 {
     font-size: clamp(26px, 4.2vw, 40px); line-height: 1.08; letter-spacing: -.025em;
-    font-weight: 680; margin: 0 0 20px; max-width: 24ch;
+    font-weight: 680; margin: 0 0 12px; max-width: 24ch;
 }
+.intro { margin: 0 0 20px; max-width: 80ch; color: var(--muted); }
+.intro a { color: var(--ink); text-underline-offset: 3px; }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; }
 
 /* Layout: controls on the left, scene and legend on the right */
@@ -33,6 +35,7 @@ h1 {
 
 /* ---------- Controls ---------- */
 .control { padding: 14px 18px 12px; }
+.control + .control { border-top: 1px solid var(--line); }
 .control label { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; font-weight: 600; margin-bottom: 2px; }
 .control output { font-weight: 500; color: var(--path); }
 input[type=range] { width: 100%; accent-color: var(--path); height: 28px; margin: 0; }
@@ -49,6 +52,7 @@ input:focus-visible { outline: 2px solid var(--path); outline-offset: 2px; }
 /* ---------- Footer ---------- */
 .site-footer { background: var(--ink); color: var(--paper); font-size: 13px; }
 .site-footer-inner { max-width: 1180px; margin: 0 auto; padding: 14px 16px; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 28px; }
+.site-footer p { margin: 0; text-align: center; }
 .site-footer a { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, var(--paper) 45%, transparent); }
 .site-footer a:hover { text-decoration-color: currentColor; }
 .site-footer a:focus-visible { outline: 2px solid var(--paper); outline-offset: 3px; }
