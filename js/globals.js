@@ -29,4 +29,6 @@ export const TARGET = {
     defaultKm: 4,
     headingStepDeg: 0.1,
     visibleMarginKm: 0.5,     // initial headings are limited to arrivals this far inside the frame
+    solveToleranceKm: 0.02,   // the bisection stops when the drone ends this close to the target
+    maxSolveShots: 40,
 };

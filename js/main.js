@@ -1,7 +1,7 @@
 // Entry point
 
 import { AIRSPEED, SCENE, TARGET } from './globals.js';
-import { evaluateShot, launchLimits } from './drone.js';
+import { bisectionShots, evaluateShot, launchLimits } from './planner.js';
 import { drawScene, pxPerKm } from './scene.js';
 import { setupSlider } from './controls.js';
 import { clamp, deg, formatSigned, rad } from './util.js';
@@ -34,6 +34,23 @@ const targetSlider = setupSlider($('target'), $('targetOut'), value => `${format
     render();
 });
 
+// Finds the initial heading that reaches the target, by bisection (all the shots at once).
+function solve() {
+    const { reach, range } = limits;
+
+    if (state.targetY >= reach.lo && state.targetY <= reach.hi) {
+        const shots = bisectionShots(state.airspeed, range, state.targetY, { toleranceKm: TARGET.solveToleranceKm, maxShots: TARGET.maxSolveShots });
+
+        for (const shot of shots) {
+            state.theta = shot.theta;
+        }
+
+        headingSlider.setValue(deg(state.theta));
+    }
+
+    render();   // if the target is out of reach, the message says so
+}
+
 // Everything that depends on the airspeed: the headings offered by the slider, and the targets that can be reached.
 function refreshLimits() {
     const { range } = limits = launchLimits(state.airspeed, SCENE.halfHeightKm - TARGET.visibleMarginKm);
@@ -50,6 +67,8 @@ function refreshLimits() {
         value: deg(state.theta),
     });
 }
+
+$('solve').addEventListener('click', solve);
 
 speedSlider.configure({ min: AIRSPEED.minKmh, max: AIRSPEED.maxKmh, step: AIRSPEED.stepKmh, value: AIRSPEED.defaultKmh });
 targetSlider.configure({ min: -TARGET.rangeKm, max: TARGET.rangeKm, step: 0.1, value: TARGET.defaultKm });

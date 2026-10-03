@@ -4,6 +4,7 @@
    Along the path, lambda = sin(t) / w is the same in every zone (Snell-like invariant). */
 
 import { SCENE, WINDS } from './globals.js';
+import { rad } from './util.js';
 
 export const toWindVector = ({ speedKmh, dirDeg }) => ({ cx: speedKmh * Math.cos(rad(dirDeg)), cy: speedKmh * Math.sin(rad(dirDeg)) });
 

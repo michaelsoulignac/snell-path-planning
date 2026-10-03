@@ -21,5 +21,10 @@ export function setupSlider(input, output, format, onChange) {
             input.value = value;
             showValue();
         },
+
+        setValue(value) {
+            input.value = value;
+            showValue();
+        },
     };
 }
