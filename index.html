@@ -16,7 +16,7 @@
                     It can be <a href="https://michaelsoulignac.github.io/snell-path-planning/math" target="_blank" rel="noopener">shown mathematically</a>
                     that, in each wind zone, the drone is deflected like a light ray, following a law analogous to Snell's.
                     To reach the target, it is therefore enough to adjust the initial heading of the drone, and nothing else.
-                    Try moving the ordinate of the target, then finding the optimal initial heading!
+                    Try moving the ordinate of the target, then finding the optimal initial heading, or press <em>Solve</em>: the planner finds it for you, by bisection.
                 </p>
             </header>
 
@@ -34,6 +34,7 @@
                         <label for="target"><span>Target ordinate</span><output id="targetOut"></output></label>
                         <input id="target" type="range">
                     </div>
+                    <div class="actions"><button id="solve" type="button">Solve</button></div>
                 </div>
                 <div class="scene-area">
                     <div class="scene-scroll"><svg id="scene" role="img" aria-label="A drone flying through four wind zones towards a target"></svg></div>
@@ -50,8 +51,8 @@
         <footer class="site-footer">
             <div class="site-footer-inner">
                 <p>
-                    © Michaël Soulignac 2026 -
-                    Contribute to this project <a href="https://github.com/michaelsoulignac/snell-path-planning" target="_blank" rel="noopener">on GitHub!</a>
+                    © Michaël Soulignac 2026 - MIT License -
+                    <a href="https://github.com/michaelsoulignac/snell-path-planning" target="_blank" rel="noopener">Contribute to this project on GitHub!</a>
                 </p>
             </div>
         </footer>
