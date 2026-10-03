@@ -2,7 +2,7 @@
 
 import { AIRSPEED, SCENE, TARGET } from './globals.js';
 import { buildModel } from './drone.js';
-import { bisectionShots, evaluateShot, launchLimits } from './planner.js';
+import { bisectionShots, evaluateShot, isReachable, launchLimits } from './planner.js';
 import { drawScene, pxPerKm } from './scene.js';
 import { setupSlider } from './controls.js';
 import { clamp, deg, formatSigned, rad } from './util.js';
@@ -38,10 +38,8 @@ const targetSlider = setupSlider($('target'), $('targetOut'), value => `${format
 
 // Finds the initial heading that reaches the target, by bisection (all the shots at once).
 function solve() {
-    const { reach, range } = limits;
-
-    if (state.targetY >= reach.lo && state.targetY <= reach.hi) {
-        const shots = bisectionShots(model, range, state.targetY, { toleranceKm: TARGET.solveToleranceKm, maxShots: TARGET.maxSolveShots });
+    if (isReachable(limits.reach, state.targetY, toleranceKm)) {
+        const shots = bisectionShots(model, limits, state.targetY, { toleranceKm: TARGET.solveToleranceKm, maxShots: TARGET.maxSolveShots });
 
         for (const shot of shots) {
             state.theta = shot.theta;
@@ -61,7 +59,8 @@ function refreshLimits() {
 
     // Slider bounds: the range, rounded inwards to the slider step
     const scale = 1 / TARGET.headingStepDeg;
-    const lo = Math.ceil(deg(range.lo) * scale) / scale, hi = Math.floor(deg(range.hi) * scale) / scale;
+    const lo = Math.ceil(deg(range.lo) * scale) / scale;
+    const hi = Math.floor(deg(range.hi) * scale) / scale;
 
     state.theta = clamp(state.theta, range.lo, range.hi);
     headingSlider.configure({

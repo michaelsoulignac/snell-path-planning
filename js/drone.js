@@ -24,7 +24,8 @@ export const verticalShift = (wind, v, t, dx) => dx * (v * Math.sin(t) + wind.cy
    c = v: the half-plane delimited by the line normal to the wind (half-angle pi / 2).
    c > v: a sector of half-angle asin(v / c), which tends to pi / 2 when c tends to v. */
 export function accessibilitySector(wind, v) {
-    const c = Math.hypot(wind.cx, wind.cy), alpha = Math.atan2(wind.cy, wind.cx);
+    const c = Math.hypot(wind.cx, wind.cy);
+    const alpha = Math.atan2(wind.cy, wind.cx);
     const half = c < v ? Math.PI : Math.asin(v / c);
 
     return { lo: alpha - half, hi: alpha + half };
@@ -48,33 +49,21 @@ const GUARD_W = 0.03;
 const GUARD_G = 0.02;
 
 function isUsableHeading(wind, v, t) {
-    const gx = v * Math.cos(t) + wind.cx, w = v + wind.cx * Math.cos(t) + wind.cy * Math.sin(t);
+    const gx = v * Math.cos(t) + wind.cx;
+    const w = v + wind.cx * Math.cos(t) + wind.cy * Math.sin(t);
 
     return gx > GUARD_G * v && w > GUARD_W * v;
-}
-
-// Finds the edge of the usable headings between a bad and a good heading.
-function bisectEdge(wind, v, bad, good) {
-    for (let i = 0; i < 45; i++) {
-        const mid = (bad + good) / 2;
-
-        if (isUsableHeading(wind, v, mid)) {
-            good = mid;
-        } else {
-            bad = mid;
-        }
-    }
-
-    return good;
 }
 
 /* Arc [lo, hi] of usable headings in a zone. On it, lambda(t) is strictly increasing,
    so lambda ranges over an interval [lambdaLo, lambdaHi]. */
 export function usableArc(wind, v) {
-    const N = 1440, step = TWO_PI / N;
+    const N = 1440;   // sampling of the circle of headings: 0.25 degree
+    const step = TWO_PI / N;
     const angle = j => -Math.PI + (j + 0.5) * step;
     const ok = Array.from({ length: N }, (_, j) => isUsableHeading(wind, v, angle(j)));
-    let bestStart = 0, bestLength = 0;
+    let bestStart = 0;
+    let bestLength = 0;
 
     // Longest cyclic run of usable headings
     for (let j = 0; j < N; j++) {
@@ -92,8 +81,13 @@ export function usableArc(wind, v) {
         }
     }
 
-    const lo0 = angle(bestStart), hi0 = lo0 + (bestLength - 1) * step;
-    const lo = bisectEdge(wind, v, lo0 - step, lo0), hi = bisectEdge(wind, v, hi0 + step, hi0);
+    const lo0 = angle(bestStart);
+    const hi0 = lo0 + (bestLength - 1) * step;
+
+    // The edges lie between the last unusable sample and the first usable one
+    const isUsable = t => isUsableHeading(wind, v, t);
+    const lo = bisect(isUsable, lo0 - step, lo0);
+    const hi = bisect(isUsable, hi0 + step, hi0);
 
     return { lo, hi, lambdaLo: lambdaOf(wind, v, lo), lambdaHi: lambdaOf(wind, v, hi) };
 }
@@ -102,9 +96,12 @@ export function usableArc(wind, v) {
 
 /* Heading in a zone of wind c for a given lambda: sin(t - phi) = lambda v / R.
    Only the arcsine branch can be admissible. Beyond the usable arc, lambda is clamped to its edge. */
-function headingFromLambda(wind, v, arc, lambda) {
+export function headingFromLambda(wind, v, arc, lambda) {
     const clamped = clamp(lambda, arc.lambdaLo, arc.lambdaHi);
-    const A = 1 - clamped * wind.cy, B = clamped * wind.cx, R = Math.hypot(A, B), phi = Math.atan2(B, A);
+    const A = 1 - clamped * wind.cy;
+    const B = clamped * wind.cx;
+    const R = Math.hypot(A, B);
+    const phi = Math.atan2(B, A);
 
     return phi + Math.asin(clamp(clamped * v / R, -1, 1));
 }
@@ -123,7 +120,8 @@ export function chainAt(model, lastLeg, lambda) {
 
     for (let k = 0; k <= lastLeg; k++) {
         if (k < legs.length - 1) {
-            const above = model.saturatedAbove[k], below = model.saturatedBelow[k];
+            const above = model.saturatedAbove[k];
+            const below = model.saturatedBelow[k];
 
             if (above && lambda >= above.lambda) {
                 ys = above.ys;
@@ -142,7 +140,9 @@ export function chainAt(model, lastLeg, lambda) {
     return ys;
 }
 
-// Saturation lambdas, computed frontier by frontier (each one is a monotone scalar root).
+/* Saturation lambdas, computed frontier by frontier (each one is a monotone scalar root).
+   saturatedAbove[k] / saturatedBelow[k]: lambda from which (resp. up to which) frontier k saturates, and the frozen path upstream.
+   The frontiers are processed in order, so a saturation upstream is taken into account by the next ones. */
 function calibrate(model) {
     const { bound, lambdaLo, lambdaHi } = model;
 
@@ -168,7 +168,11 @@ function calibrate(model) {
 export function buildModel(airspeed) {
     const arcs = legs.map(leg => usableArc(leg.wind, airspeed));
     const model = {
-        airspeed, arcs, bound: halfHeightKm, saturatedAbove: [], saturatedBelow: [],
+        airspeed,
+        arcs,
+        bound: halfHeightKm,
+        saturatedAbove: [],
+        saturatedBelow: [],
         lambdaLo: Math.min(...arcs.map(arc => arc.lambdaLo)),
         lambdaHi: Math.max(...arcs.map(arc => arc.lambdaHi)),
     };
@@ -180,18 +184,26 @@ export function buildModel(airspeed) {
 
 /* ---------- Path actually flown ---------- */
 
+/* Tolerances of the exact travel time:
+   - DISCRIMINANT_EPS: relative. At the edge of the accessibility sector the discriminant is 0, and rounding can make it slightly negative.
+   - DENOMINATOR_EPS: the denominator must be positive (a drone that does not move forward never arrives), and it is a divisor. */
+const DISCRIMINANT_EPS = 1e-9;
+const DENOMINATOR_EPS = 1e-12;
+
 // Exact travel time of a displacement (dx, dy) in wind c: d^2 / (d.c + sqrt(delta)), or Infinity if impossible.
 function exactTravelTime(v, wind, dx, dy) {
-    const d2 = dx * dx + dy * dy, dc = dx * wind.cx + dy * wind.cy, cross = wind.cx * dy - wind.cy * dx;
+    const d2 = dx * dx + dy * dy;
+    const dc = dx * wind.cx + dy * wind.cy;
+    const cross = wind.cx * dy - wind.cy * dx;
     const delta = v * v * d2 - cross * cross;
 
-    if (delta < -1e-9 * v * v * d2) {
+    if (delta < -DISCRIMINANT_EPS * v * v * d2) {
         return Infinity;
     }
 
     const den = dc + Math.sqrt(Math.max(delta, 0));
 
-    return den > 1e-12 ? d2 / den : Infinity;
+    return den > DENOMINATOR_EPS ? d2 / den : Infinity;
 }
 
 // Heading actually flown along a leg with vertical shift dy (null if the leg is impossible).
@@ -207,5 +219,8 @@ function legHeading(leg, v, dy) {
 
 // Heading actually flown along each leg of the path (null for a leg that cannot be flown).
 export function describePath(v, ys) {
-    return { ys, headings: legs.map((leg, k) => legHeading(leg, v, ys[k + 1] - ys[k])) };
+    return {
+        ys,
+        headings: legs.map((leg, k) => legHeading(leg, v, ys[k + 1] - ys[k])),
+    };
 }

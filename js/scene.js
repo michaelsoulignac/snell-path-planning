@@ -9,14 +9,23 @@ import { accessibilitySector, legs, xs } from './drone.js';
 
 // Arrow from (x1, y1) to (x2, y2), in pixels.
 export function arrow(x1, y1, x2, y2, className, headSize = 10) {
-    const dx = x2 - x1, dy = y2 - y1, length = Math.hypot(dx, dy);
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const length = Math.hypot(dx, dy);
 
     if (length < 2) {
-        return '';
+        return '';   // too short (in pixels) to draw an arrowhead
     }
 
-    const ux = dx / length, uy = dy / length, h = Math.min(headSize, length * 0.6);
-    const bx = x2 - ux * h, by = y2 - uy * h, px = -uy * h * 0.5, py = ux * h * 0.5;   // base of the arrowhead and its half-width offset
+    const ux = dx / length;
+    const uy = dy / length;
+    const h = Math.min(headSize, length * 0.6);   // the head never takes more than 60% of the arrow
+
+    // Base of the arrowhead, and its half-width offset
+    const bx = x2 - ux * h;
+    const by = y2 - uy * h;
+    const px = -uy * h * 0.5;
+    const py = ux * h * 0.5;
 
     return `<line x1="${coord(x1)}" y1="${coord(y1)}" x2="${coord(bx)}" y2="${coord(by)}" class="${className}"/>`
         + `<polygon points="${coord(x2)},${coord(y2)} ${coord(bx + px)},${coord(by + py)} ${coord(bx - px)},${coord(by - py)}" class="${className}"/>`;
@@ -112,7 +121,8 @@ function drawZones() {
     WINDS.forEach((wind, k) => {
         const centerX = toX(k * zoneWidthKm) + zoneWidthPx / 2;
         const half = arrowLength(wind.speedKmh) / 2;
-        const ux = Math.cos(rad(wind.dirDeg)), uy = -Math.sin(rad(wind.dirDeg));       // unit vector in pixels (y flipped)
+        const ux = Math.cos(rad(wind.dirDeg));
+        const uy = -Math.sin(rad(wind.dirDeg));   // unit vector in pixels (y flipped)
 
         markup += arrow(centerX - ux * half, arrowY - uy * half, centerX + ux * half, arrowY + uy * half, 'wind-arrow', 12)
             + `<text class="zone-title" x="${coord(centerX)}" y="${margin.top - 12}">Zone ${k + 1}</text>`;
@@ -148,7 +158,8 @@ function bannerFor({ hit, reachable, miss }) {
 export function drawScene(sceneElement, shot, { airspeed, targetY }) {
     const { ys, headings, hit } = shot;
     const end = xs.length - 1;
-    const startX = toX(xs[0]), startY = toY(ys[0]);
+    const startX = toX(xs[0]);
+    const startY = toY(ys[0]);
 
     let markup = drawDefs() + drawAccessibilitySectors(ys, airspeed) + drawZones() + drawGrid();
 
@@ -160,7 +171,10 @@ export function drawScene(sceneElement, shot, { airspeed, targetY }) {
             continue;   // this leg cannot be flown
         }
 
-        const x = toX(xs[k]), y = toY(ys[k]), t = headings[k], len = arrowLength(airspeed);
+        const x = toX(xs[k]);
+        const y = toY(ys[k]);
+        const t = headings[k];
+        const len = arrowLength(airspeed);
 
         markup += arrow(x, y, x + len * Math.cos(t), y - len * Math.sin(t), 'heading-arrow', 11);
     }
@@ -174,7 +188,8 @@ export function drawScene(sceneElement, shot, { airspeed, targetY }) {
         + `<text class="label halo" x="${coord(startX)}" y="${coord(startY + 26)}" text-anchor="middle">start</text>`;
 
     // Target: a dot in a circle, which is filled when the drone reaches it
-    const targetX = toX(xs[end]), targetPy = toY(targetY);
+    const targetX = toX(xs[end]);
+    const targetPy = toY(targetY);
 
     markup += `<circle class="target${hit ? ' hit' : ''}" cx="${coord(targetX)}" cy="${coord(targetPy)}" r="${TARGET.radiusPx}"/>`
         + (hit ? '' : `<circle class="target-dot" cx="${coord(targetX)}" cy="${coord(targetPy)}" r="2.5"/>`)

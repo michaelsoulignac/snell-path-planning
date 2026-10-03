@@ -14,9 +14,12 @@ export const formatNumber = (x, digits = 1) =>
 
 export const formatSigned = (x, digits = 1) => (x >= 0 ? '+' : '−') + formatNumber(Math.abs(x), digits);
 
-// Smallest value of [lo, hi] for which test is true (test is false at lo and true at hi, and monotone).
+/* Bisection: the value of [lo, hi] where test switches from false (at lo) to true (at hi), test being monotone.
+   Returns the true side. lo may be greater than hi. */
+const BISECTION_STEPS = 60;   // the interval is divided by 2^60, far below the precision of a double
+
 export function bisect(test, lo, hi) {
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < BISECTION_STEPS; i++) {
         const mid = (lo + hi) / 2;
 
         if (test(mid)) {
