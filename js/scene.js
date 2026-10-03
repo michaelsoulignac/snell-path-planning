@@ -92,10 +92,6 @@ function drawAccessibilitySectors(ys, airspeed) {
     let markup = '';
 
     for (let k = 0; k < legs.length; k++) {
-        if (k >= ys.length) {
-            break;   // the path stops before this zone
-        }
-
         const sector = accessibilitySector(legs[k].wind, airspeed);
 
         markup += sectorPolygon({
@@ -126,9 +122,9 @@ function drawZones() {
 }
 
 // Ground track through the waypoints (xs[i], ys[i]).
-function drawPath(ys) {
+function drawPath(ys, headings) {
     const legLines = ys.slice(1).map((y, k) =>
-        `<line class="leg" x1="${coord(toX(xs[k]))}" y1="${coord(toY(ys[k]))}" x2="${coord(toX(xs[k + 1]))}" y2="${coord(toY(y))}"/>`);
+        `<line class="leg${headings[k] === null ? ' bad' : ''}" x1="${coord(toX(xs[k]))}" y1="${coord(toY(ys[k]))}" x2="${coord(toX(xs[k + 1]))}" y2="${coord(toY(y))}"/>`);
 
     return `<g class="path">${legLines.join('')}</g>`;
 }
@@ -137,11 +133,7 @@ const drawWaypoint = (x, y, className = 'waypoint', radius = 5) =>
     `<circle class="${className}" cx="${coord(toX(x))}" cy="${coord(toY(y))}" r="${radius}"/>`;
 
 // Message at the bottom of the scene: [kind, text], where kind is '' | 'ok' | 'bad'.
-function bannerFor({ ok, hit, reachable, miss }) {
-    if (!ok) {
-        return ['bad', 'No path: the wind pushes the drone beyond the frontiers.'];
-    }
-
+function bannerFor({ hit, reachable, miss }) {
     if (hit) {
         return ['ok', 'Target reached'];
     }
@@ -160,24 +152,25 @@ export function drawScene(sceneElement, shot, { airspeed, targetY }) {
 
     let markup = drawDefs() + drawAccessibilitySectors(ys, airspeed) + drawZones() + drawGrid();
 
-    markup += `<g clip-path="url(#plot)">${drawPath(ys)}</g>`;
+    markup += `<g clip-path="url(#plot)">${drawPath(ys, headings)}</g>`;
 
     // Heading of each leg, drawn from the waypoint where the leg starts (the pixel y axis points down).
     for (let k = 0; k < headings.length; k++) {
+        if (headings[k] === null) {
+            continue;   // this leg cannot be flown
+        }
+
         const x = toX(xs[k]), y = toY(ys[k]), t = headings[k], len = arrowLength(airspeed);
 
         markup += arrow(x, y, x + len * Math.cos(t), y - len * Math.sin(t), 'heading-arrow', 11);
     }
 
-    for (let k = 1; k < end && k < ys.length; k++) {
+    for (let k = 1; k < end; k++) {
         markup += drawWaypoint(xs[k], ys[k]);
     }
 
-    if (ys.length === xs.length) {
-        markup += drawWaypoint(xs[end], ys[end], 'endpoint', 5.5);
-    }
-
-    markup += drawWaypoint(xs[0], ys[0], 'start-point', 6)
+    markup += drawWaypoint(xs[end], ys[end], 'endpoint', 5.5)
+        + drawWaypoint(xs[0], ys[0], 'start-point', 6)
         + `<text class="label halo" x="${coord(startX)}" y="${coord(startY + 26)}" text-anchor="middle">start</text>`;
 
     // Target: a dot in a circle, which is filled when the drone reaches it

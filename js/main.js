@@ -1,6 +1,7 @@
 // Entry point
 
 import { AIRSPEED, SCENE, TARGET } from './globals.js';
+import { buildModel } from './drone.js';
 import { bisectionShots, evaluateShot, launchLimits } from './planner.js';
 import { drawScene, pxPerKm } from './scene.js';
 import { setupSlider } from './controls.js';
@@ -12,10 +13,11 @@ const toleranceKm = TARGET.radiusPx / pxPerKm;   // the drone reaches the target
 
 // What the page displays: set by the controls
 const state = { airspeed: AIRSPEED.defaultKmh, theta: 0, targetY: TARGET.defaultKm };
+let model;    // everything that depends on the airspeed: usable headings of the zones, saturation of the frontiers
 let limits;   // initial headings offered (range) and final ordinates they allow (reach), at the current airspeed
 
 function render() {
-    drawScene(sceneElement, evaluateShot(state.airspeed, state.theta, state.targetY, limits.reach, toleranceKm), state);
+    drawScene(sceneElement, evaluateShot(model, state.theta, state.targetY, limits.reach, toleranceKm), state);
 }
 
 const headingSlider = setupSlider($('theta'), $('thetaOut'), value => `${formatSigned(value)}°`, value => {
@@ -39,7 +41,7 @@ function solve() {
     const { reach, range } = limits;
 
     if (state.targetY >= reach.lo && state.targetY <= reach.hi) {
-        const shots = bisectionShots(state.airspeed, range, state.targetY, { toleranceKm: TARGET.solveToleranceKm, maxShots: TARGET.maxSolveShots });
+        const shots = bisectionShots(model, range, state.targetY, { toleranceKm: TARGET.solveToleranceKm, maxShots: TARGET.maxSolveShots });
 
         for (const shot of shots) {
             state.theta = shot.theta;
@@ -53,7 +55,9 @@ function solve() {
 
 // Everything that depends on the airspeed: the headings offered by the slider, and the targets that can be reached.
 function refreshLimits() {
-    const { range } = limits = launchLimits(state.airspeed, SCENE.halfHeightKm - TARGET.visibleMarginKm);
+    model = buildModel(state.airspeed);
+
+    const { range } = limits = launchLimits(model, SCENE.halfHeightKm - TARGET.visibleMarginKm);
 
     // Slider bounds: the range, rounded inwards to the slider step
     const scale = 1 / TARGET.headingStepDeg;

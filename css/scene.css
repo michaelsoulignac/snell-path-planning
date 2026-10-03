@@ -25,6 +25,7 @@ svg text { font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, 
 .heading-arrow { stroke: var(--heading); fill: var(--heading); stroke-width: 3; }
 
 .path .leg { stroke: var(--path); stroke-width: 3.4; stroke-linecap: round; }
+.path .leg.bad { stroke: var(--bad); stroke-dasharray: 7 5; }
 .waypoint { fill: var(--panel); stroke: var(--ink); stroke-width: 2; }
 .start-point { fill: var(--ink); stroke: var(--ink); stroke-width: 2; }
 .endpoint { fill: var(--path); stroke: var(--panel); stroke-width: 2; }

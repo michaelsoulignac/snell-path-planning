@@ -1,50 +1,18 @@
 /* Path planner: finds the initial heading that makes the drone reach a target.
    The final ordinate of the path increases with the initial heading, so a bisection on this heading solves the problem. */
 
-import { headingFromLambda, lambdaOf, legs, propagate, usableArc } from './drone.js';
-import { last } from './util.js';
+import { chainAt, describePath, lambdaOf, legs } from './drone.js';
+import { bisect, last } from './util.js';
 
-// Path launched with heading theta0 (relative to the air) in the first zone: it fixes lambda for the whole path.
-const shoot = (v, theta0) => propagate(v, lambdaOf(legs[0].wind, v, theta0));
+// Ordinates of the waypoints of the path launched with heading theta0 (relative to the air) in the first zone: it fixes lambda for the whole path.
+const shoot = (model, theta0) => chainAt(model, legs.length - 1, lambdaOf(legs[0].wind, model.airspeed, theta0));
 
-const finalOrdinate = (v, theta0) => last(shoot(v, theta0).ys);
-
-/* Initial headings whose lambda is usable in every zone: lambda must lie in the intersection of the intervals of the zones.
-   The final ordinate increases with the initial heading over this range. */
-function initialHeadingRange(v) {
-    const arcs = legs.map(leg => usableArc(leg.wind, v));
-    const lambdaLo = Math.max(...arcs.map(arc => arc.lambdaLo));
-    const lambdaHi = Math.min(...arcs.map(arc => arc.lambdaHi));
-
-    if (lambdaLo >= lambdaHi) {
-        return { lo: 0, hi: 0 };   // no lambda is usable everywhere: there is no path
-    }
-
-    return {
-        lo: headingFromLambda(legs[0].wind, v, lambdaLo),
-        hi: headingFromLambda(legs[0].wind, v, lambdaHi),
-    };
-}
-
-// Smallest heading of [lo, hi] for which test is true (test is false at lo and true at hi, and monotone).
-function bisect(test, lo, hi) {
-    for (let i = 0; i < 50; i++) {
-        const mid = (lo + hi) / 2;
-
-        if (test(mid)) {
-            hi = mid;
-        } else {
-            lo = mid;
-        }
-    }
-
-    return hi;
-}
+const finalOrdinate = (model, theta0) => last(shoot(model, theta0));
 
 // Initial headings whose final ordinate stays within [-yMax, yMax].
-function visibleHeadingRange(v, yMax) {
-    const full = initialHeadingRange(v);
-    const finalAt = theta => finalOrdinate(v, theta);
+function visibleHeadingRange(model, yMax) {
+    const full = { lo: model.arcs[0].lo, hi: model.arcs[0].hi };
+    const finalAt = theta => finalOrdinate(model, theta);
     let { lo, hi } = full;
 
     if (finalAt(lo) < -yMax) {
@@ -66,22 +34,22 @@ function visibleHeadingRange(v, yMax) {
     return lo < hi ? { lo, hi } : full;
 }
 
-/* What the drone can do at a given airspeed:
+/* What the drone can do with this model:
    range: the initial headings offered (final ordinate within the frame),
    reach: the final ordinates they allow. */
-export function launchLimits(v, yMax) {
-    const range = visibleHeadingRange(v, yMax);
+export function launchLimits(model, yMax) {
+    const range = visibleHeadingRange(model, yMax);
 
-    return { range, reach: { lo: finalOrdinate(v, range.lo), hi: finalOrdinate(v, range.hi) } };
+    return { range, reach: { lo: finalOrdinate(model, range.lo), hi: finalOrdinate(model, range.hi) } };
 }
 
 /* Successive shots of a bisection on the initial heading, until the final ordinate is within toleranceKm of the target.
    range: initial headings of the search. The final ordinate increases with the initial heading. */
-export function* bisectionShots(v, range, targetY, { toleranceKm, maxShots }) {
+export function* bisectionShots(model, range, targetY, { toleranceKm, maxShots }) {
     let { lo, hi } = range;
 
     for (let i = 0; i < maxShots; i++) {
-        const theta = (lo + hi) / 2, miss = finalOrdinate(v, theta) - targetY;
+        const theta = (lo + hi) / 2, miss = finalOrdinate(model, theta) - targetY;
 
         yield { theta, miss };
 
@@ -98,14 +66,16 @@ export function* bisectionShots(v, range, targetY, { toleranceKm, maxShots }) {
 }
 
 // Path launched with heading theta0, compared to the target: miss > 0 when the drone arrives above it.
-export function evaluateShot(v, theta0, targetY, reach, toleranceKm) {
-    const shot = shoot(v, theta0);
-    const miss = last(shot.ys) - targetY;
+export function evaluateShot(model, theta0, targetY, reach, toleranceKm) {
+    const path = describePath(model.airspeed, shoot(model, theta0));
+    const miss = last(path.ys) - targetY;
+    const feasible = path.headings.every(heading => heading !== null);
 
     return {
-        ...shot,
+        ...path,
+        feasible,
         miss,
-        hit: Math.abs(miss) <= toleranceKm,
+        hit: feasible && Math.abs(miss) <= toleranceKm,
         reachable: targetY >= reach.lo - toleranceKm && targetY <= reach.hi + toleranceKm,
     };
 }
