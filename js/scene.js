@@ -38,7 +38,7 @@ export function sectorPolygon({ apexX, apexY, lo, hi, className, clipId, radius 
 
 /* ---------- Geometry ---------- */
 
-const { zoneWidthKm, halfHeightKm, viewWidthPx, margin, tickStepKm, windArrowPxPerKmh } = SCENE;
+const { zoneWidthKm, halfHeightKm, viewWidthPx, margin, tickStepKm, speedArrowPx, speedArrowRefKmh } = SCENE;
 const zoneCount = WINDS.length;
 
 // Scene scale: the horizontal extent is the wind zones, side by side.
@@ -48,6 +48,9 @@ const plotHeight = 2 * halfHeightKm * pxPerKm;
 const zoneWidthPx = zoneWidthKm * pxPerKm;
 const viewHeight = margin.top + plotHeight + margin.bottom;
 const originY = margin.top + plotHeight / 2;              // pixel ordinate of y = 0
+
+// Length of the arrow of a speed, wind or drone: logarithmic scale (no maximum), so the same speed always gives the same length.
+const arrowLength = speedKmh => speedArrowPx * Math.log(1 + speedKmh / speedArrowRefKmh);
 
 const toX = km => margin.left + km * pxPerKm;
 const toY = km => originY - km * pxPerKm;                 // the y axis points up, the SVG one points down
@@ -105,18 +108,18 @@ function drawAccessibilitySectors(ys, airspeed) {
     return markup;
 }
 
-// Wind arrow and labels of every zone.
-function drawZones(airspeed) {
+// Wind arrow and title of every zone.
+function drawZones() {
     let markup = '';
     const arrowY = margin.top + 60;
 
     WINDS.forEach((wind, k) => {
         const centerX = toX(k * zoneWidthKm) + zoneWidthPx / 2;
-        const half = Math.min(wind.speedKmh * windArrowPxPerKmh, zoneWidthPx * 0.4);   // the arrow stays inside its zone
+        const half = arrowLength(wind.speedKmh) / 2;
         const ux = Math.cos(rad(wind.dirDeg)), uy = -Math.sin(rad(wind.dirDeg));       // unit vector in pixels (y flipped)
 
         markup += arrow(centerX - ux * half, arrowY - uy * half, centerX + ux * half, arrowY + uy * half, 'wind-arrow', 12)
-            + `<text class="zone-title" x="${coord(centerX)}" y="30">Zone ${k + 1}</text>`;
+            + `<text class="zone-title" x="${coord(centerX)}" y="${margin.top - 12}">Zone ${k + 1}</text>`;
     });
 
     return markup;
@@ -155,13 +158,13 @@ export function drawScene(sceneElement, shot, { airspeed, targetY }) {
     const end = xs.length - 1;
     const startX = toX(xs[0]), startY = toY(ys[0]);
 
-    let markup = drawDefs() + drawAccessibilitySectors(ys, airspeed) + drawZones(airspeed) + drawGrid();
+    let markup = drawDefs() + drawAccessibilitySectors(ys, airspeed) + drawZones() + drawGrid();
 
     markup += `<g clip-path="url(#plot)">${drawPath(ys)}</g>`;
 
     // Heading of each leg, drawn from the waypoint where the leg starts (the pixel y axis points down).
     for (let k = 0; k < headings.length; k++) {
-        const x = toX(xs[k]), y = toY(ys[k]), t = headings[k], len = SCENE.headingArrowPx;
+        const x = toX(xs[k]), y = toY(ys[k]), t = headings[k], len = arrowLength(airspeed);
 
         markup += arrow(x, y, x + len * Math.cos(t), y - len * Math.sin(t), 'heading-arrow', 11);
     }

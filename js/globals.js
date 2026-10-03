@@ -16,10 +16,10 @@ export const SCENE = {
     zoneWidthKm: 10,
     halfHeightKm: 10,         // half-height of every frontier
     viewWidthPx: 960,         // the scale (pixels per km) follows from this width and the horizontal extent
-    headingArrowPx: 46,
-    margin: { left: 60, right: 60, top: 46, bottom: 34 },
+    margin: { left: 60, right: 60, top: 34, bottom: 34 },
     tickStepKm: 5,
-    windArrowPxPerKmh: 0.55,  // half-length of the wind arrow per km/h of wind (capped so that it fits in the zone)
+    speedArrowPx: 120,        // length of the arrows of the wind and of the drone: speedArrowPx * ln(1 + speed / speedArrowRefKmh)
+    speedArrowRefKmh: 80,
 };
 
 // Target and initial heading
