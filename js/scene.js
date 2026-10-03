@@ -116,8 +116,7 @@ function drawZones(airspeed) {
         const ux = Math.cos(rad(wind.dirDeg)), uy = -Math.sin(rad(wind.dirDeg));       // unit vector in pixels (y flipped)
 
         markup += arrow(centerX - ux * half, arrowY - uy * half, centerX + ux * half, arrowY + uy * half, 'wind-arrow', 12)
-            + `<text class="zone-title" x="${coord(centerX)}" y="24">Zone ${k + 1}</text>`
-            + `<text class="zone-sub" x="${coord(centerX)}" y="40">wind ${wind.speedKmh} km/h, c/v = ${(wind.speedKmh / airspeed).toFixed(2)}</text>`;
+            + `<text class="zone-title" x="${coord(centerX)}" y="30">Zone ${k + 1}</text>`;
     });
 
     return markup;
