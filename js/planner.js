@@ -85,15 +85,17 @@ export function launchLimits(model, yMax) {
 export const isReachable = (reach, targetY, toleranceKm) => targetY >= reach.lo - toleranceKm && targetY <= reach.hi + toleranceKm;
 
 /* Successive shots of a bisection on the initial heading, until the final ordinate is within toleranceKm of the target.
-   The search stays within the initial headings offered (limits.range), where the final ordinate increases with the heading. */
+   The search stays within the initial headings offered (limits.range), where the final ordinate increases with the heading.
+   Each shot gives its heading, the ordinates of its path (to draw it) and its miss. */
 export function* bisectionShots(model, limits, targetY, { toleranceKm, maxShots }) {
     const { range, reach } = limits;
 
     // A target only reachable thanks to the tolerance of its circle is aimed at with the extreme heading
     if (targetY > reach.hi || targetY < reach.lo) {
         const theta = targetY > reach.hi ? range.hi : range.lo;
+        const ys = shoot(model, theta);
 
-        yield { theta, miss: finalOrdinate(model, theta) - targetY };
+        yield { theta, ys, miss: last(ys) - targetY };
 
         return;
     }
@@ -102,9 +104,10 @@ export function* bisectionShots(model, limits, targetY, { toleranceKm, maxShots 
 
     for (let i = 0; i < maxShots; i++) {
         const theta = (lo + hi) / 2;
-        const miss = finalOrdinate(model, theta) - targetY;
+        const ys = shoot(model, theta);
+        const miss = last(ys) - targetY;
 
-        yield { theta, miss };
+        yield { theta, ys, miss };
 
         if (Math.abs(miss) < toleranceKm || hi - lo < MIN_HEADING_INTERVAL) {
             return;

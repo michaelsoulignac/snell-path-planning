@@ -20,12 +20,14 @@ svg text { font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", system-ui, 
 .axis0 { stroke: var(--line); stroke-width: 1; stroke-dasharray: 2 5; }
 .plot-border { fill: none; stroke: var(--ink); stroke-width: 1.5; }
 .frontier { stroke: var(--ink); stroke-width: 1.5; }
-.accessible { fill: var(--accessible); fill-opacity: .2; stroke-width: 0; }
+.accessible { fill: var(--accessible); fill-opacity: .3; stroke: var(--accessible); stroke-opacity: .7; stroke-width: 1.3; }
 .wind-arrow { stroke: var(--wind); fill: var(--wind); stroke-width: 3.5; }
 .heading-arrow { stroke: var(--heading); fill: var(--heading); stroke-width: 3; }
 
 .path .leg { stroke: var(--path); stroke-width: 3.4; stroke-linecap: round; }
 .path .leg.bad { stroke: var(--bad); stroke-dasharray: 7 5; }
+.path.faded { opacity: .25; }
+.path.faded .leg { stroke-width: 2; }
 .waypoint { fill: var(--panel); stroke: var(--ink); stroke-width: 2; }
 .start-point { fill: var(--ink); stroke: var(--ink); stroke-width: 2; }
 .endpoint { fill: var(--path); stroke: var(--panel); stroke-width: 2; }

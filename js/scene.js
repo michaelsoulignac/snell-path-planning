@@ -132,11 +132,11 @@ function drawZones() {
 }
 
 // Ground track through the waypoints (xs[i], ys[i]).
-function drawPath(ys, headings) {
+function drawPath(ys, headings, faded = false) {
     const legLines = ys.slice(1).map((y, k) =>
         `<line class="leg${headings[k] === null ? ' bad' : ''}" x1="${coord(toX(xs[k]))}" y1="${coord(toY(ys[k]))}" x2="${coord(toX(xs[k + 1]))}" y2="${coord(toY(y))}"/>`);
 
-    return `<g class="path">${legLines.join('')}</g>`;
+    return `<g class="path${faded ? ' faded' : ''}">${legLines.join('')}</g>`;
 }
 
 const drawWaypoint = (x, y, className = 'waypoint', radius = 5) =>
@@ -149,13 +149,13 @@ function bannerFor({ hit, reachable, miss }) {
     }
 
     if (!reachable) {
-        return ['bad', 'Target out of reach at this airspeed'];
+        return ['bad', 'No solution: the target is out of reach at this airspeed'];
     }
 
     return ['', `Missed by ${formatNumber(Math.abs(miss), 1)} km, too ${miss > 0 ? 'high' : 'low'}`];
 }
 
-export function drawScene(sceneElement, shot, { airspeed, targetY }) {
+export function drawScene(sceneElement, shot, { airspeed, targetY, ghosts }) {
     const { ys, headings, hit } = shot;
     const end = xs.length - 1;
     const startX = toX(xs[0]);
@@ -163,7 +163,10 @@ export function drawScene(sceneElement, shot, { airspeed, targetY }) {
 
     let markup = drawDefs() + drawAccessibilitySectors(ys, airspeed) + drawZones() + drawGrid();
 
-    markup += `<g clip-path="url(#plot)">${drawPath(ys, headings)}</g>`;
+    // The previous shots of the bisection, as faint traces under the current path
+    const paths = ghosts.map(ghost => drawPath(ghost, [], true)).join('') + drawPath(ys, headings);
+
+    markup += `<g clip-path="url(#plot)">${paths}</g>`;
 
     // Heading of each leg, drawn from the waypoint where the leg starts (the pixel y axis points down).
     for (let k = 0; k < headings.length; k++) {

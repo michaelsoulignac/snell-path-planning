@@ -31,4 +31,6 @@ export const TARGET = {
     visibleMarginKm: 0.5,     // initial headings are limited to arrivals this far inside the frame
     solveToleranceKm: 0.02,   // the bisection stops when the drone ends this close to the target
     maxSolveShots: 40,
+    solveStepDelayMs: 400,    // pause between two shots of the animated bisection
+    maxGhostShots: 10,        // previous shots kept on screen as faint traces during the animation
 };
