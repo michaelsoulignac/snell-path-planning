@@ -13,10 +13,16 @@ This project has two main objectives:
 
 ## Demonstration app
 
-**Work in progress:** the application is still under development and not yet complete.
+**Try the live demo [here](https://michaelsoulignac.github.io/snell-path-planning/) !**
 
-- **Technologies:** vanilla JavaScript (no framework), SVG for the drawings
-- **Live demo:** [michaelsoulignac.github.io/snell-path-planning](https://michaelsoulignac.github.io/snell-path-planning/)
+This interactive webapp illustrates a drone flying through successive wind zones. It shows the wind in each zone, the region that can be reached, the drone's heading relative to the air, and the resulting path.
+
+You can adjust the drone's airspeed, initial heading, and the target ordinate, and immediately see how they affect the path.
+
+Try to reach the target by finding the right initial heading yourself, or press Solve and let the path planner find it for you using bisection.
+
+The app is built with HTML, vanilla JavaScript (no framework), and SVG for the visualisation.
+
 
 ## The maths under the hood
 
