@@ -46,7 +46,8 @@ button {
     width: 100%; font: inherit; font-weight: 600; padding: 8px 16px; border: 1px solid var(--path); border-radius: 4px;
     background: var(--path); color: var(--panel); cursor: pointer;
 }
-button:hover { filter: brightness(1.12); }
+button:hover:not(:disabled) { filter: brightness(1.12); }
+button:disabled { background: var(--line); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
 
 /* ---------- Legend ---------- */
 .legend { display: flex; flex-wrap: wrap; gap: 6px 20px; padding: 9px 14px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); }

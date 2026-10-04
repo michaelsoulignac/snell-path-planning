@@ -2,13 +2,14 @@
 
 import { AIRSPEED, SCENE, TARGET } from './globals.js';
 import { buildModel } from './drone.js';
-import { bisectionShots, evaluateShot, isReachable, launchLimits } from './planner.js';
+import { bisectionShots, evaluateShot, launchLimits } from './planner.js';
 import { drawScene, pxPerKm } from './scene.js';
 import { setupSlider } from './controls.js';
 import { clamp, deg, formatSigned, rad } from './util.js';
 
 const $ = id => document.getElementById(id);
 const sceneElement = $('scene');
+const solveButton = $('solve');
 const toleranceKm = TARGET.radiusPx / pxPerKm;   // the drone reaches the target when it ends inside its circle
 
 // What the page displays: set by the controls
@@ -17,7 +18,10 @@ let model;    // everything that depends on the airspeed: usable headings of the
 let limits;   // initial headings offered (range) and final ordinates they allow (reach), at the current airspeed
 
 function render() {
-    drawScene(sceneElement, evaluateShot(model, state.theta, state.targetY, limits.reach, toleranceKm), state);
+    const shot = evaluateShot(model, state.theta, state.targetY, limits.reach, toleranceKm);
+
+    solveButton.disabled = !shot.reachable;   // nothing to solve when the target is out of reach
+    drawScene(sceneElement, shot, state);
 }
 
 const headingSlider = setupSlider($('theta'), $('thetaOut'), value => `${formatSigned(value)}°`, value => {
@@ -36,19 +40,16 @@ const targetSlider = setupSlider($('target'), $('targetOut'), value => `${format
     render();
 });
 
-// Finds the initial heading that reaches the target, by bisection (all the shots at once).
+// Finds the initial heading that reaches the target, by bisection (all the shots at once). The button is disabled if there is no solution.
 function solve() {
-    if (isReachable(limits.reach, state.targetY, toleranceKm)) {
-        const shots = bisectionShots(model, limits, state.targetY, { toleranceKm: TARGET.solveToleranceKm, maxShots: TARGET.maxSolveShots });
+    const shots = bisectionShots(model, limits, state.targetY, { toleranceKm: TARGET.solveToleranceKm, maxShots: TARGET.maxSolveShots });
 
-        for (const shot of shots) {
-            state.theta = shot.theta;
-        }
-
-        headingSlider.setValue(deg(state.theta));
+    for (const shot of shots) {
+        state.theta = shot.theta;
     }
 
-    render();   // if the target is out of reach, the message says so
+    headingSlider.setValue(deg(state.theta));
+    render();
 }
 
 // Everything that depends on the airspeed: the headings offered by the slider, and the targets that can be reached.
@@ -71,7 +72,7 @@ function refreshLimits() {
     });
 }
 
-$('solve').addEventListener('click', solve);
+solveButton.addEventListener('click', solve);
 
 speedSlider.configure({ min: AIRSPEED.minKmh, max: AIRSPEED.maxKmh, step: AIRSPEED.stepKmh, value: AIRSPEED.defaultKmh });
 targetSlider.configure({ min: -TARGET.rangeKm, max: TARGET.rangeKm, step: 0.1, value: TARGET.defaultKm });
